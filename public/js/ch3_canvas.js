@@ -54,7 +54,7 @@ function onLoadShader(g1, fileString, type)
     }
 
     if (VSHADER_SOURCE && FSHADER_SOURCE)
-        shaderFinalSetup(g1);
+        shaderCompile(g1);
 }
 
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGLShader
@@ -73,7 +73,7 @@ function createShader(gl, sourceCode, type) {
     return shader;
 }
 
-function shaderFinalSetup(gl)
+function shaderCompile(gl)
 {
     console.log('shaderFinalSetup');
 
@@ -127,15 +127,15 @@ function shaderFinalSetup(gl)
     window.requestAnimationFrame(renderLoop);
 }
 
-function initVertexBuffers(gl) {
+function initVertexBuffers() {
     
     console.log('initVertexBuffers');
     
     // the vertices, count 3
     var vertices = new Float32Array([
-        0.0, 0.5, 
+        0.0, 0.0, 
         -0.5, -0.5, 
-        0,5, -0.5
+        0.5, -0.5
     ]);
     
     // number of vertices
@@ -154,7 +154,7 @@ function initVertexBuffers(gl) {
     //write the data to the buffer object
     gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
     
-    var a_position = gl.getAttribLocation(gl.program, 'a_position');
+    // var a_position = gl.getAttribLocation(gl.program, 'a_position');
     
     // Assign the buffer object to a_position variable
     gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, 0, 0);
@@ -175,19 +175,18 @@ function renderLoop(timestamp) {
 
     console.log('enter: renderLoop');        
 
-    /*
-    gl.vertexAttrib3f(a_position, (counter / counter_max) * 1.0, 0.0, 0.0);
+    
+    // gl.vertexAttrib3f(a_position, (counter / counter_max) * 1.0, 0.0, 0.0);
 
-    gl.vertexAttrib1f(a_size, (counter / counter_max) * 100.0);
+    gl.vertexAttrib1f(a_size, 10.0);
 
-    gl.uniform1f(u_time, timestamp / 1000.0);
+    // gl.uniform1f(u_time, timestamp / 1000.0);
 
-    */
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    var n = initVertexBuffers(gl);
+    var n = initVertexBuffers();
     
     if (n < 0){
         console.log('Failed to set the positions of the vertices');
@@ -234,8 +233,8 @@ function main() {
     };
 
     // Load shaders from files
-    loadShaderFile(gl, 'shaders//ch2_fshader.frag', gl.FRAGMENT_SHADER);
-    loadShaderFile(gl, 'shaders//ch2_vshader.vert', gl.VERTEX_SHADER);
+    loadShaderFile(gl, 'shaders//ch3_fshader.frag', gl.FRAGMENT_SHADER);
+    loadShaderFile(gl, 'shaders//ch3_vshader.vert', gl.VERTEX_SHADER);
 }
 
 
