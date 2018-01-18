@@ -12,6 +12,7 @@
 var u_time = null;
 var a_position = 0.0;
 var a_size = 10.0;
+var Tx = 0.5, Ty = 0.5, Tz = 0.0;
 
 var counter_max = 250.0;
 var counter = 0;
@@ -123,6 +124,24 @@ function shaderCompile(gl)
         console.log('failed to get attribute size');
         return;
     }
+    
+    var u_translation = gl.getUniformLocation(program, 'u_translation');
+    
+    gl.uniform4f(u_translation, Tx, Ty, Tz, 0.0);
+    
+    var angle_deg = 40.0;
+    
+    var radian = Math.PI * angle_deg / 180.0;
+    var cosB = Math.cos(radian);
+    var sinB = Math.sin(radian);
+    
+    var u_cosB = gl.getUniformLocation(program, 'u_cosB');
+    var u_sinB = gl.getUniformLocation(program, 'u_sinB');
+    
+    console.log("cosB: " + cosB + " sinB: " + sinB);
+    
+    gl.uniform1f(u_cosB, cosB);
+    gl.uniform1f(u_sinB, sinB);
 
     window.requestAnimationFrame(renderLoop);
 }
@@ -133,8 +152,8 @@ function initVertexBuffers() {
     
     // the vertices, count 3
     var vertices = new Float32Array([
-        0.0, 0.0, 
-        -0.5, -0.5, 
+        0.0, 0.5,
+        -0.5, -0.5,
         0.5, -0.5
     ]);
     
@@ -163,7 +182,6 @@ function initVertexBuffers() {
     gl.enableVertexAttribArray(a_position);
     
     return n;
-    
 }
 
 // <editor-fold>
@@ -193,7 +211,7 @@ function renderLoop(timestamp) {
         return;
     }
 
-    gl.drawArrays(gl.Points, 0, n);
+    gl.drawArrays(gl.POINTS, 0, n);
 
     // window.requestAnimationFrame(renderLoop);
 }
