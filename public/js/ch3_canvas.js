@@ -12,10 +12,16 @@
 var u_time = null;
 var a_position = 0.0;
 var a_size = 10.0;
-var Tx = 0.5, Ty = 0.5, Tz = 0.0;
+var u_translation = null;
+var u_cosB = null;
+var u_sinB = null;
 
-var counter_max = 250.0;
-var counter = 0;
+var Tx = 0.0, Ty = 0.0, Tz = 0.0;
+var angleDeg = 0.0;
+var numOfVertices = 0;
+
+var renderLoopUpdateDebugLimit = 5;
+var renderLoopUpdateCounter = 0;
 
 var gl = null;
 
@@ -58,22 +64,6 @@ function onLoadShader(g1, fileString, type)
         shaderCompile(g1);
 }
 
-// https://developer.mozilla.org/en-US/docs/Web/API/WebGLShader
-function createShader(gl, sourceCode, type) {
-
-    console.log('createShader');
-
-    var shader = gl.createShader(type);
-    gl.shaderSource(shader, sourceCode);
-    gl.compileShader(shader);
-
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        var info = gl.getShaderInfoLog(shader);
-        throw 'Could not compile WebGL shader program. \n\n' + info;
-    }
-    return shader;
-}
-
 function shaderCompile(gl)
 {
     console.log('shaderFinalSetup');
@@ -111,6 +101,27 @@ function shaderCompile(gl)
         return;
     }
 
+    u_translation = gl.getUniformLocation(program, 'u_translation');
+    
+    if (u_translation < 0) {
+        console.log('failed to get attribute u_translation');
+        return;
+    }
+    
+    u_cosB = gl.getUniformLocation(program, 'u_cosB');
+    
+    if (u_cosB < 0) {
+        console.log('failed to get attribute u_cosB');
+        return;
+    }
+    
+    u_sinB = gl.getUniformLocation(program, 'u_sinB');
+    
+    if (u_sinB < 0) {
+        console.log('failed to get attribute u_sinB');
+        return;
+    }
+
     a_position = gl.getAttribLocation(program, "a_position");
 
     if (a_position < 0) {
@@ -125,25 +136,23 @@ function shaderCompile(gl)
         return;
     }
     
-    var u_translation = gl.getUniformLocation(program, 'u_translation');
-    
-    gl.uniform4f(u_translation, Tx, Ty, Tz, 0.0);
-    
-    var angle_deg = 40.0;
-    
-    var radian = Math.PI * angle_deg / 180.0;
-    var cosB = Math.cos(radian);
-    var sinB = Math.sin(radian);
-    
-    var u_cosB = gl.getUniformLocation(program, 'u_cosB');
-    var u_sinB = gl.getUniformLocation(program, 'u_sinB');
-    
-    console.log("cosB: " + cosB + " sinB: " + sinB);
-    
-    gl.uniform1f(u_cosB, cosB);
-    gl.uniform1f(u_sinB, sinB);
-
     window.requestAnimationFrame(renderLoop);
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/API/WebGLShader
+function createShader(gl, sourceCode, type) {
+
+    console.log('createShader');
+
+    var shader = gl.createShader(type);
+    gl.shaderSource(shader, sourceCode);
+    gl.compileShader(shader);
+
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        var info = gl.getShaderInfoLog(shader);
+        throw 'Could not compile WebGL shader program. \n\n' + info;
+    }
+    return shader;
 }
 
 function initVertexBuffers() {
@@ -152,9 +161,9 @@ function initVertexBuffers() {
     
     // the vertices, count 3
     var vertices = new Float32Array([
-        0.0, 0.5,
-        -0.5, -0.5,
-        0.5, -0.5
+        0.0, 0.577, 
+        -0.5, -0.288, 
+        0.5, -0.288
     ]);
     
     // number of vertices
@@ -191,29 +200,59 @@ function initVertexBuffers() {
 // https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame
 function renderLoop(timestamp) {
 
-    console.log('enter: renderLoop');        
+    if (renderLoopUpdateCounter > renderLoopUpdateDebugLimit)
+    {
+        // console.log('enter: renderLoop');        
 
-    
-    // gl.vertexAttrib3f(a_position, (counter / counter_max) * 1.0, 0.0, 0.0);
+        // gl.vertexAttrib3f(a_position, (counter / counter_max) * 1.0, 0.0, 0.0);
 
-    gl.vertexAttrib1f(a_size, 10.0);
+        gl.vertexAttrib1f(a_size, 10.0);
 
-    // gl.uniform1f(u_time, timestamp / 1000.0);
+        gl.uniform1f(u_time, timestamp / 1000.0);
 
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
-    gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.clear(gl.COLOR_BUFFER_BIT);
 
-    var n = initVertexBuffers();
-    
-    if (n < 0){
-        console.log('Failed to set the positions of the vertices');
-        return;
+        gl.uniform4f(u_translation, Tx, Ty, Tz, 0.0);
+
+        var radian = Math.PI * angleDeg / 180.0;
+        var cosB = Math.cos(radian);
+        var sinB = Math.sin(radian);
+
+        //console.log("cosB: " + cosB + " sinB: " + sinB);
+
+        gl.uniform1f(u_cosB, cosB);
+        gl.uniform1f(u_sinB, sinB);
+
+        gl.drawArrays(gl.TRIANGLES, 0, numOfVertices);
+        
+        angleDeg += 2.0;
+        
+        if(angleDeg >= 360)
+            angleDeg = 0;
+        
+        /*
+        Tx += 0.01;
+        Ty += 0.01;
+        Tz += 0.01;
+        
+        if(Tz >= 1.0)
+        {
+            Tx = 0.0;
+            Ty = 0.0;
+            Tz = 0.0
+        }
+        */
+        
+        // console.log(angleDeg);
+        
+        renderLoopUpdateCounter = 0;
     }
-
-    gl.drawArrays(gl.POINTS, 0, n);
-
-    // window.requestAnimationFrame(renderLoop);
+    else
+        renderLoopUpdateCounter++;
+    
+    window.requestAnimationFrame(renderLoop);
 }
 
 function clickEvent(ev, gl, canvas, a_position) {
@@ -225,9 +264,14 @@ function clickEvent(ev, gl, canvas, a_position) {
     var rect = ev.target.getBoundingClientRect();
 
     x = ((x - rect.left) - canvas.width / 2) / (canvas.width / 2);
+            
     y = (canvas.height / 2 - (y - rect.top)) / (canvas.height / 2);
 
     console.log('x: ' + x);
+    console.log('y: ' + y);
+            
+    console.log('rect.left: ' + rect.left);
+    console.log('rect.top: ' + rect.top);
 
     g_points.push([x, y]);
 }
@@ -249,7 +293,14 @@ function main() {
     canvas.onmousedown = function (ev) {
         clickEvent(ev, gl, canvas, a_position);
     };
+    
+    numOfVertices = initVertexBuffers();
 
+    if (numOfVertices < 0){
+        console.log('Failed to set the positions of the vertices');
+        return;
+    }
+        
     // Load shaders from files
     loadShaderFile(gl, 'shaders//ch3_fshader.frag', gl.FRAGMENT_SHADER);
     loadShaderFile(gl, 'shaders//ch3_vshader.vert', gl.VERTEX_SHADER);
