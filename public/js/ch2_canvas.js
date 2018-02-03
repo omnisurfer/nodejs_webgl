@@ -43,7 +43,7 @@ function renderLoop(timestamp) {
 
     // draw what has been clicked
     var len = g_points.length;
-
+    
     for (var i = 0; i < len; i += 2) {
         
         var xy = g_points[i];

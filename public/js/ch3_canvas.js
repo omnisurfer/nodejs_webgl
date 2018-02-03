@@ -17,10 +17,13 @@ var u_cosB = null;
 var u_sinB = null;
 
 var Tx = 0.0, Ty = 0.0, Tz = 0.0;
+var Sx = 0.0, Sy = 0.0, Sz = 0.0;
 var angleDeg = 0.0;
 var numOfVertices = 0;
 
-var renderLoopUpdateDebugLimit = 5;
+var u_xformMatrix = null;
+
+var renderLoopUpdateDebugLimit = 0;
 var renderLoopUpdateCounter = 0;
 
 var gl = null;
@@ -136,6 +139,13 @@ function shaderCompile(gl)
         return;
     }
     
+    u_xformMatrix = gl.getUniformLocation(program, "u_xformMatrix");
+    
+    if (u_xformMatrix < 0) {
+            console.log('failed to get attribute u_xformMatrix');
+        return;
+    }
+    
     window.requestAnimationFrame(renderLoop);
 }
 
@@ -214,36 +224,41 @@ function renderLoop(timestamp) {
 
         gl.clear(gl.COLOR_BUFFER_BIT);
 
-        gl.uniform4f(u_translation, Tx, Ty, Tz, 0.0);
-
         var radian = Math.PI * angleDeg / 180.0;
         var cosB = Math.cos(radian);
         var sinB = Math.sin(radian);
 
-        //console.log("cosB: " + cosB + " sinB: " + sinB);
+        // gl.uniform1f(u_cosB, cosB);
+        // gl.uniform1f(u_sinB, sinB);
 
-        gl.uniform1f(u_cosB, cosB);
-        gl.uniform1f(u_sinB, sinB);
+        // console.log("cosB: " + cosB + " sinB: " + sinB);
+                
+        Tx = 0.0; //cosB * 1.00;
+        Ty = 0.0; //sinB * 1.00;
+        Tz = 0.00;   
+
+        // gl.uniform4f(u_translation, Tx, Ty, Tz, 0.0);
+        
+        Sx = Math.cos(Math.PI * (angleDeg) / 180);
+        // console.log(Sx);
+        Sy = Sx;
+        Sz = 1.0;
+        
+        var xformMatrix = new Float32Array([
+            cosB * Sx, -sinB * Sy, 0.0, 0.0,
+            sinB * Sx, cosB * Sy, 0.0, 0.0,
+            0.0, 0.0, 1.0 * Sz, 0.0,
+            Tx, Ty, Tz, 1.0
+            ]);
+
+        gl.uniformMatrix4fv(u_xformMatrix, false, xformMatrix);        
 
         gl.drawArrays(gl.TRIANGLES, 0, numOfVertices);
         
         angleDeg += 2.0;
         
         if(angleDeg >= 360)
-            angleDeg = 0;
-        
-        /*
-        Tx += 0.01;
-        Ty += 0.01;
-        Tz += 0.01;
-        
-        if(Tz >= 1.0)
-        {
-            Tx = 0.0;
-            Ty = 0.0;
-            Tz = 0.0
-        }
-        */
+            angleDeg = 0;                                    
         
         // console.log(angleDeg);
         
