@@ -21,7 +21,14 @@ var Sx = 0.0, Sy = 0.0, Sz = 0.0;
 var angleDeg = 0.0;
 var numOfVertices = 0;
 
+//in degrees/s
+var ANGLE_STEP = 58.0;
+var currentAngle = 0.0;
+//time when last frame was updated
+var g_last = 0.0;
+
 var u_modelMatrix = null;
+var modelMatrix = null;
 
 var renderLoopUpdateDebugLimit = 0;
 var renderLoopUpdateCounter = 0;
@@ -69,7 +76,7 @@ function onLoadShader(g1, fileString, type)
 
 function shaderCompile(gl)
 {
-    console.log('shaderFinalSetup');
+    console.log('shaderCompile');
 
     var vshader = createShader(gl, VSHADER_SOURCE, gl.VERTEX_SHADER);
     var fshader = createShader(gl, FSHADER_SOURCE, gl.FRAGMENT_SHADER);
@@ -146,6 +153,9 @@ function shaderCompile(gl)
         return;
     }
     
+    //init the time reference for first frame just befor calling animation loop
+    g_last = Date.now();
+            
     window.requestAnimationFrame(renderLoop);
 }
 
@@ -214,29 +224,12 @@ function renderLoop(timestamp) {
     {
         // console.log('enter: renderLoop');        
 
-        gl.vertexAttrib1f(a_size, 10.0);
+        // gl.vertexAttrib1f(a_size, 10.0);
 
-        gl.uniform1f(u_time, timestamp / 1000.0);
-
-        gl.clearColor(0.0, 0.0, 0.0, 1.0);
-
-        gl.clear(gl.COLOR_BUFFER_BIT);
-       
-        var modelMatrix = new Matrix4();
-                
-        modelMatrix.setRotate(angleDeg, 0, 1, 0);        
-        modelMatrix.translate(Tx, Ty, 0);
+        // gl.uniform1f(u_time, timestamp / 1000.0);                              
         
-        gl.uniformMatrix4fv(u_modelMatrix, false, modelMatrix.elements);
-
-        gl.drawArrays(gl.TRIANGLES, 0, numOfVertices);
-        
-        angleDeg += 3.0;
-        Tx = Math.sin(angleDeg * Math.PI / 180.0) * 0.5;
-        Ty = Math.cos(angleDeg * Math.PI / 180.0) * 0.5;
-       
-        if(angleDeg >= 360)
-            angleDeg = 0;                
+        currentAngle = animate(currentAngle);
+        draw(gl, numOfVertices, currentAngle, modelMatrix, u_modelMatrix);
         
         renderLoopUpdateCounter = 0;
     }
@@ -267,6 +260,30 @@ function clickEvent(ev, gl, canvas, a_position) {
     g_points.push([x, y]);
 }
 
+function animate(angle)
+{
+    var now = Date.now();
+    var elapsed = now - g_last; //ms
+    g_last = now;
+    
+    var newAngle = angle + (ANGLE_STEP * elapsed) / 1000.0;
+    
+    return newAngle %= 360;
+}
+
+function draw(gl, numOfVertices, currentAngle, modelMatrix, u_modelMatrix)
+{                
+        modelMatrix.setRotate(currentAngle, 0, 0, 1);        
+        modelMatrix.translate(Tx, Ty, 0);
+        
+        gl.uniformMatrix4fv(u_modelMatrix, false, modelMatrix.elements);
+        
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        
+        gl.drawArrays(gl.TRIANGLES, 0, numOfVertices);                 
+}
 // </editor-fold>
 
 function main() {
@@ -292,6 +309,9 @@ function main() {
         return;
     }
         
+    //init model matrix
+    modelMatrix = new Matrix4();
+    
     // Load shaders from files
     loadShaderFile(gl, 'shaders//ch4_fshader.frag', gl.FRAGMENT_SHADER);
     loadShaderFile(gl, 'shaders//ch4_vshader.vert', gl.VERTEX_SHADER);
