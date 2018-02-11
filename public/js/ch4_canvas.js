@@ -183,11 +183,14 @@ function initVertexBuffers() {
     var vertices = new Float32Array([
         0.0, 0.577, 
         -0.5, -0.288, 
-        0.5, -0.288
+        0.5, -0.288,
+        0.7, 0.577, 
+        0.2, 0.288, 
+        0.5, 0.288
     ]);
     
     // number of vertices
-    var n = 3;
+    var n = 6;
     
     //create a buffer object to store the vertices
     var vertexBuffer = gl.createBuffer();
@@ -201,8 +204,6 @@ function initVertexBuffers() {
     
     //write the data to the buffer object
     gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-    
-    // var a_position = gl.getAttribLocation(gl.program, 'a_position');
     
     // Assign the buffer object to a_position variable
     gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, 0, 0);
@@ -229,6 +230,7 @@ function renderLoop(timestamp) {
         // gl.uniform1f(u_time, timestamp / 1000.0);                              
         
         currentAngle = animate(currentAngle);
+        
         draw(gl, numOfVertices, currentAngle, modelMatrix, u_modelMatrix);
         
         renderLoopUpdateCounter = 0;
@@ -268,13 +270,32 @@ function animate(angle)
     
     var newAngle = angle + (ANGLE_STEP * elapsed) / 1000.0;
     
+    // console.log('FPS: ' + (1/elapsed) * 1000);
+    
     return newAngle %= 360;
 }
 
 function draw(gl, numOfVertices, currentAngle, modelMatrix, u_modelMatrix)
 {                
-        modelMatrix.setRotate(currentAngle, 0, 0, 1);        
-        modelMatrix.translate(Tx, Ty, 0);
+        modelMatrix.setRotate(currentAngle, 0, 0, 1);
+        
+        modelMatrix.translate(0, 0, 0);
+                       
+        // expirment to see if I can animate a single verticex - seems to work.
+        // Maybe there is a way to do this in the shader itself...
+        /*
+        var vertexX = Math.sin((2 * Math.PI * 1 * Tx) / 180) * 1.0;
+        
+        var vertices = new Float32Array([
+        vertexX, 0.577, 
+        -0.5, -0.288, 
+        0.5, -0.288
+        ]);
+        
+        Tx += 1;
+              
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);        
+         */
         
         gl.uniformMatrix4fv(u_modelMatrix, false, modelMatrix.elements);
         
