@@ -11,7 +11,7 @@
 
 var u_time = null;
 var a_position = 0.0;
-var a_size = 10.0;
+var a_pointSize = null;
 var u_translation = null;
 var u_cosB = null;
 var u_sinB = null;
@@ -138,18 +138,26 @@ function shaderCompile(gl)
         console.log('failed to get attribute position');
         return;
     }
+        
+    a_pointSize = gl.getAttribLocation(program, "a_pointSize");
 
-    a_size = gl.getAttribLocation(program, "a_size");
-
-    if (a_size < 0) {
-        console.log('failed to get attribute size');
+    if (a_pointSize < 0) {
+        console.log('failed to get attribute a_pointSize');
         return;
-    }
-    
+    }                    
+   
     u_modelMatrix = gl.getUniformLocation(program, "u_modelMatrix");
     
     if (u_modelMatrix < 0) {
             console.log('failed to get attribute u_modelMatrix');
+        return;
+    }
+    
+    // init the vertices
+    numOfVertices = initVertexBuffers();
+
+    if (numOfVertices < 0){
+        console.log('Failed to set the positions of the vertices');
         return;
     }
     
@@ -179,7 +187,7 @@ function initVertexBuffers() {
     
     console.log('initVertexBuffers');
     
-    // the vertices, count 3
+    // the vertices
     var vertices = new Float32Array([
         0.0, 0.577, 
         -0.5, -0.288, 
@@ -190,27 +198,43 @@ function initVertexBuffers() {
     ]);
     
     // number of vertices
-    var n = 6;
+    var n = 6;       
     
     //create a buffer object to store the vertices
     var vertexBuffer = gl.createBuffer();
     if(!vertexBuffer) {
-        console.log('Failed to create the buffer object');
+        console.log('Failed to create vertexBuffer object.');
         return -1;
     }
-    
+   
     //bind the buffer object to GL memory space
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     
     //write the data to the buffer object
     gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
     
-    // Assign the buffer object to a_position variable
+        // Assign the buffer object to a_position variable
     gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, 0, 0);
     
     // enable the assignment to a_position variable
     gl.enableVertexAttribArray(a_position);
     
+    
+    var sizes = new Float32Array([10.0, 20.0, 30.0, 30.0, 20.0, 10.0]);
+    
+    var sizeBuffer = gl.createBuffer();
+    if(!sizeBuffer) {
+        console.log('Failed to create sizeBuffer object.');
+    }
+    
+    gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+        
+    gl.bufferData(gl.ARRAY_BUFFER, sizes, gl.STATIC_DRAW);    
+                
+    gl.vertexAttribPointer(a_pointSize, 1, gl.FLOAT, false, 0, 0);
+    
+    gl.enableVertexAttribArray(a_pointSize);    
+   
     return n;
 }
 
@@ -279,23 +303,7 @@ function draw(gl, numOfVertices, currentAngle, modelMatrix, u_modelMatrix)
 {                
         modelMatrix.setRotate(currentAngle, 0, 0, 1);
         
-        modelMatrix.translate(0, 0, 0);
-                       
-        // expirment to see if I can animate a single verticex - seems to work.
-        // Maybe there is a way to do this in the shader itself...
-        /*
-        var vertexX = Math.sin((2 * Math.PI * 1 * Tx) / 180) * 1.0;
-        
-        var vertices = new Float32Array([
-        vertexX, 0.577, 
-        -0.5, -0.288, 
-        0.5, -0.288
-        ]);
-        
-        Tx += 1;
-              
-        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);        
-         */
+        modelMatrix.translate(0, 0, 0);                      
         
         gl.uniformMatrix4fv(u_modelMatrix, false, modelMatrix.elements);
         
@@ -303,7 +311,7 @@ function draw(gl, numOfVertices, currentAngle, modelMatrix, u_modelMatrix)
         
         gl.clear(gl.COLOR_BUFFER_BIT);
         
-        gl.drawArrays(gl.TRIANGLES, 0, numOfVertices);                 
+        gl.drawArrays(gl.POINTS, 0, numOfVertices);                 
 }
 // </editor-fold>
 
@@ -323,19 +331,12 @@ function main() {
         clickEvent(ev, gl, canvas, a_position);
     };
     
-    numOfVertices = initVertexBuffers();
-
-    if (numOfVertices < 0){
-        console.log('Failed to set the positions of the vertices');
-        return;
-    }
-        
     //init model matrix
     modelMatrix = new Matrix4();
     
     // Load shaders from files
-    loadShaderFile(gl, 'shaders//ch4_fshader.frag', gl.FRAGMENT_SHADER);
-    loadShaderFile(gl, 'shaders//ch4_vshader.vert', gl.VERTEX_SHADER);
+    loadShaderFile(gl, 'shaders//ch5_fshader.frag', gl.FRAGMENT_SHADER);
+    loadShaderFile(gl, 'shaders//ch5_vshader.vert', gl.VERTEX_SHADER);
 }
 
 
