@@ -12,9 +12,13 @@
 var u_time = null;
 var a_position = 0.0;
 var a_pointSize = null;
+var a_color = null;
 var u_translation = null;
 var u_cosB = null;
 var u_sinB = null;
+
+u_width = null;
+u_height = null;
 
 var Tx = 0.0, Ty = 0.0, Tz = 0.0;
 var Sx = 0.0, Sy = 0.0, Sz = 0.0;
@@ -144,7 +148,14 @@ function shaderCompile(gl)
     if (a_pointSize < 0) {
         console.log('failed to get attribute a_pointSize');
         return;
-    }                    
+    }
+    
+    a_color = gl.getAttribLocation(program, "a_color");
+    
+    if (a_color < 0) {
+        console.log('failed to get attribute a_color');
+        return;    
+    }
    
     u_modelMatrix = gl.getUniformLocation(program, "u_modelMatrix");
     
@@ -152,6 +163,21 @@ function shaderCompile(gl)
             console.log('failed to get attribute u_modelMatrix');
         return;
     }
+    
+    u_width = gl.getUniformLocation(program, "u_width");
+    
+    if (u_width < 0) {
+            console.log('failed to get attribute u_width');
+        return;
+    }
+    
+    u_height = gl.getUniformLocation(program, "u_height");
+    
+    if (u_height < 0) {
+            console.log('failed to get attribute u_height');
+        return;
+    }
+    
     
     // init the vertices
     numOfVertices = initVertexBuffers();
@@ -186,55 +212,52 @@ function createShader(gl, sourceCode, type) {
 function initVertexBuffers() {
     
     console.log('initVertexBuffers');
-    
-    // the vertices
-    var vertices = new Float32Array([
-        0.0, 0.577, 
-        -0.5, -0.288, 
-        0.5, -0.288,
-        0.7, 0.577, 
-        0.2, 0.288, 
-        0.5, 0.288
-    ]);
-    
+
     // number of vertices
     var n = 6;       
     
     //create a buffer object to store the vertices
-    var vertexBuffer = gl.createBuffer();
-    if(!vertexBuffer) {
+    var vertexSizeBuffer = gl.createBuffer();
+    
+    if(!vertexSizeBuffer) {
         console.log('Failed to create vertexBuffer object.');
         return -1;
     }
    
     //bind the buffer object to GL memory space
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexSizeBuffer);
+    
+    // Interleaved
+    // x, y, z, r, g, b, a, p
+    var verticesColorsSizes = new Float32Array([
+        0.0, 0.577,     1.0, 0.0, 0.0, 1.0,     10.0,
+        -0.5, -0.288,   0.0, 1.0, 0.0, 1.0,     20.0,
+        0.5, -0.288,    0.0, 0.0, 1.0, 1.0,     30.0,
+        0.7, 0.577,     1.0, 0.0, 0.0, 1.0,     25.0,
+        0.2, 0.288,     0.0, 1.0, 0.0, 1.0,     15.0,
+        0.5, 0.288,     0.0, 0.0, 1.0, 1.0,     50.0
+    ]);
+    
+    var FSIZE = verticesColorsSizes.BYTES_PER_ELEMENT;
     
     //write the data to the buffer object
-    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, verticesColorsSizes, gl.STATIC_DRAW);
     
-        // Assign the buffer object to a_position variable
-    gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, 0, 0);
+    // Assign the buffer object to a_position variable
+    gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, FSIZE * 7, 0);
     
     // enable the assignment to a_position variable
     gl.enableVertexAttribArray(a_position);
     
+    gl.vertexAttribPointer(a_color, 4, gl.FLOAT, false, FSIZE * 7, FSIZE * 2);
     
-    var sizes = new Float32Array([10.0, 20.0, 30.0, 30.0, 20.0, 10.0]);
+    gl.enableVertexAttribArray(a_color);
     
-    var sizeBuffer = gl.createBuffer();
-    if(!sizeBuffer) {
-        console.log('Failed to create sizeBuffer object.');
-    }
+    gl.vertexAttribPointer(
+            a_pointSize, 1, gl.FLOAT, false, FSIZE * 7, FSIZE * 6);
     
-    gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
-        
-    gl.bufferData(gl.ARRAY_BUFFER, sizes, gl.STATIC_DRAW);    
-                
-    gl.vertexAttribPointer(a_pointSize, 1, gl.FLOAT, false, 0, 0);
-    
-    gl.enableVertexAttribArray(a_pointSize);    
-   
+    gl.enableVertexAttribArray(a_pointSize);
+      
     return n;
 }
 
@@ -252,6 +275,10 @@ function renderLoop(timestamp) {
         // gl.vertexAttrib1f(a_size, 10.0);
 
         // gl.uniform1f(u_time, timestamp / 1000.0);                              
+        
+        gl.uniform1f(u_width, 800.0);
+        
+        gl.uniform1f(u_height, 800.0);
         
         currentAngle = animate(currentAngle);
         
@@ -311,7 +338,7 @@ function draw(gl, numOfVertices, currentAngle, modelMatrix, u_modelMatrix)
         
         gl.clear(gl.COLOR_BUFFER_BIT);
         
-        gl.drawArrays(gl.POINTS, 0, numOfVertices);                 
+        gl.drawArrays(gl.TRIANGLES, 0, numOfVertices);                 
 }
 // </editor-fold>
 
