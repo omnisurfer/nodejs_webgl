@@ -63,6 +63,11 @@ function loadShaderFile(g1, filename, shader) {
     request.send();
 }
 
+function loadImageResources(gl, filename)
+{
+    console.log("loadImageResources NOT IMPLEMENTED")
+}
+
 function onLoadShader(g1, fileString, type)
 {
     console.log('onLoadShader');
@@ -75,6 +80,7 @@ function onLoadShader(g1, fileString, type)
     }
 
     if (VSHADER_SOURCE && FSHADER_SOURCE)
+        // TBD, this will instead jump to a function that can accomadate images
         shaderCompile(g1);
 }
 
@@ -178,15 +184,15 @@ function shaderCompile(gl)
         return;
     }
     
-    
     // init the vertices
+    /*
     numOfVertices = initVertexBuffers();
 
     if (numOfVertices < 0){
         console.log('Failed to set the positions of the vertices');
         return;
     }
-    
+    */
     //init the time reference for first frame just befor calling animation loop
     g_last = Date.now();
             
@@ -211,7 +217,7 @@ function createShader(gl, sourceCode, type) {
 
 function initVertexBuffers() {
     
-    console.log('initVertexBuffers');
+    // console.log('initVertexBuffers');
 
     // number of vertices
     var n = 6;       
@@ -233,9 +239,59 @@ function initVertexBuffers() {
         0.0, 0.577,     1.0, 0.0, 0.0, 1.0,     10.0,
         -0.5, -0.288,   0.0, 1.0, 0.0, 1.0,     20.0,
         0.5, -0.288,    0.0, 0.0, 1.0, 1.0,     30.0,
-        0.7, 0.577,     1.0, 0.0, 0.0, 1.0,     25.0,
-        0.2, 0.288,     0.0, 1.0, 0.0, 1.0,     15.0,
-        0.5, 0.288,     0.0, 0.0, 1.0, 1.0,     50.0
+        0.8, 0.0,     1.0, 0.0, 0.0, 1.0,     25.0,
+        0.8, 0.5,     0.0, 1.0, 0.0, 1.0,     15.0,
+        0.4, 0.5,     0.0, 0.0, 1.0, 1.0,     50.0     
+    ]);
+    
+    var FSIZE = verticesColorsSizes.BYTES_PER_ELEMENT;
+    
+    //write the data to the buffer object
+    gl.bufferData(gl.ARRAY_BUFFER, verticesColorsSizes, gl.STATIC_DRAW);
+    
+    // Assign the buffer object to a_position variable
+    gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, FSIZE * 7, 0);
+    
+    // enable the assignment to a_position variable
+    gl.enableVertexAttribArray(a_position);
+    
+    gl.vertexAttribPointer(a_color, 4, gl.FLOAT, false, FSIZE * 7, FSIZE * 2);
+    
+    gl.enableVertexAttribArray(a_color);
+    
+    gl.vertexAttribPointer(
+            a_pointSize, 1, gl.FLOAT, false, FSIZE * 7, FSIZE * 6);
+    
+    gl.enableVertexAttribArray(a_pointSize);
+      
+    return n;
+}
+
+function initTextureVertexBuffers() {
+    
+    // console.log('initVertexBuffers');
+
+    // number of vertices
+    var n = 4;       
+    
+    //create a buffer object to store the vertices
+    var vertexSizeBuffer = gl.createBuffer();
+    
+    if(!vertexSizeBuffer) {
+        console.log('Failed to create vertexBuffer object.');
+        return -1;
+    }
+   
+    //bind the buffer object to GL memory space
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexSizeBuffer);
+    
+    // Interleaved
+    // x, y, z, r, g, b, a, p
+    var verticesColorsSizes = new Float32Array([
+        0.2, 0.0,       1.0, 0.0, 0.0, 1.0,     10.0,
+        0.6, 0.0,       1.0, 0.0, 0.0, 1.0,     10.0,                
+        0.2, 0.4,       1.0, 0.0, 0.0, 1.0,     10.0,        
+        0.6, 0.4,       1.0, 0.0, 0.0, 1.0,     10.0  
     ]);
     
     var FSIZE = verticesColorsSizes.BYTES_PER_ELEMENT;
@@ -282,9 +338,30 @@ function renderLoop(timestamp) {
         
         currentAngle = animate(currentAngle);
         
-        draw(gl, numOfVertices, currentAngle, modelMatrix, u_modelMatrix);
+        clear(gl);
         
-        renderLoopUpdateCounter = 0;
+        // init the vertices - init here for testing to see if I can combine render operations
+        // looks like I can
+        numOfVertices = initVertexBuffers();
+
+        if (numOfVertices < 0){
+            console.log('Failed to set the positions of the vertices');
+            return;
+        }
+        
+        // magic number, 1 = TRIANGLE_STRIP, anything else is TRIANGLES
+        drawTriangles(gl, numOfVertices, currentAngle, modelMatrix, u_modelMatrix, 0);
+                
+        var numOfTexVertices = initTextureVertexBuffers();
+        
+        if(!numOfTexVertices) {
+            console.log('Failed to set the positions of the texture vertices');
+        return -1;               
+        }
+        
+        drawTriangles(gl, numOfTexVertices, currentAngle, modelMatrix, u_modelMatrix, 1);
+        
+        renderLoopUpdateCounter = 0;        
     }
     else
         renderLoopUpdateCounter++;
@@ -326,7 +403,7 @@ function animate(angle)
     return newAngle %= 360;
 }
 
-function draw(gl, numOfVertices, currentAngle, modelMatrix, u_modelMatrix)
+function drawTriangles(gl, numOfVertices, currentAngle, modelMatrix, u_modelMatrix, mode)
 {                
         modelMatrix.setRotate(currentAngle, 0, 0, 1);
         
@@ -334,11 +411,21 @@ function draw(gl, numOfVertices, currentAngle, modelMatrix, u_modelMatrix)
         
         gl.uniformMatrix4fv(u_modelMatrix, false, modelMatrix.elements);
         
-        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        // gl.clearColor(0.0, 0.0, 0.0, 1.0);
         
-        gl.clear(gl.COLOR_BUFFER_BIT);
+        // gl.clear(gl.COLOR_BUFFER_BIT);
         
-        gl.drawArrays(gl.TRIANGLES, 0, numOfVertices);                 
+        if(mode == 1)
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, numOfVertices);                 
+        else
+            gl.drawArrays(gl.TRIANGLES, 0, numOfVertices);                 
+}
+
+function clear(gl)
+{
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        
+    gl.clear(gl.COLOR_BUFFER_BIT);
 }
 // </editor-fold>
 
@@ -364,6 +451,8 @@ function main() {
     // Load shaders from files
     loadShaderFile(gl, 'shaders//ch5_fshader.frag', gl.FRAGMENT_SHADER);
     loadShaderFile(gl, 'shaders//ch5_vshader.vert', gl.VERTEX_SHADER);
+    
+    loadImageResources(gl, 'images//me.jpg');
 }
 
 

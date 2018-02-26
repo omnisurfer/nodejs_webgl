@@ -15,9 +15,13 @@ attribute float a_pointSize;
 attribute vec4 a_color;
 varying	vec4 v_color;
 
+attribute vec2 a_TexCoord;
+varying vec2 v_TexCoord;
+
 void main() {		
         gl_Position = u_modelMatrix * a_position;		
         gl_PointSize = a_pointSize;
-		v_color = a_color;
+        v_color = a_color;
+        v_TexCoord = a_TexCoord;
 }
 
