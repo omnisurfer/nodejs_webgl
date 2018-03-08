@@ -17,8 +17,8 @@ var u_translation = null;
 var u_cosB = null;
 var u_sinB = null;
 
-u_width = null;
-u_height = null;
+var u_width = null;
+var u_height = null;
 
 var Tx = 0.0, Ty = 0.0, Tz = 0.0;
 var Sx = 0.0, Sy = 0.0, Sz = 0.0;
@@ -45,6 +45,11 @@ var g_points = [];
 var VSHADER_SOURCE = null;
 var FSHADER_SOURCE = null;
 
+var image = null;
+var u_sampler = null;
+var texture = null;
+var a_texCoord = null;
+
 // <editor-fold defaultstate="collasped" desc="Shader Setup">
 
 function loadShaderFile(g1, filename, shader) {
@@ -65,7 +70,49 @@ function loadShaderFile(g1, filename, shader) {
 
 function loadImageResources(gl, filename)
 {
-    console.log("loadImageResources NOT IMPLEMENTED")
+    console.log("loadImageResources WIP");
+    
+    var request = new XMLHttpRequest();
+    
+    request.onreadystatechange =
+            function () {
+                if (request.readyState === 4 && request.status !== 404) {
+                    onLoadImage(gl, filename);
+                }
+    };
+    
+    request.open('GET', filename, true);
+    request.send();
+}
+
+function onLoadImage(g1, filename)
+{
+    console.log("onLoadImage WIP");
+    
+    image.src = filename;
+    
+    
+    console.log("waiting...");
+    if(VSHADER_SOURCE && FSHADER_SOURCE)
+    {
+        // TBD, this will instead jump to a function that can accomadate images        
+        shaderCompile(g1);    
+    }
+}
+
+function loadTexture(gl, texture, u_sampler, image)
+{
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+    
+    gl.activeTexture(gl.TEXTURE0);
+    
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+    
+    gl.uniform1i(u_sampler, 0);
 }
 
 function onLoadShader(g1, fileString, type)
@@ -77,11 +124,7 @@ function onLoadShader(g1, fileString, type)
     } else if (type === g1.FRAGMENT_SHADER)
     {
         FSHADER_SOURCE = fileString;
-    }
-
-    if (VSHADER_SOURCE && FSHADER_SOURCE)
-        // TBD, this will instead jump to a function that can accomadate images
-        shaderCompile(g1);
+    }   
 }
 
 function shaderCompile(gl)
@@ -184,15 +227,21 @@ function shaderCompile(gl)
         return;
     }
     
-    // init the vertices
-    /*
-    numOfVertices = initVertexBuffers();
-
-    if (numOfVertices < 0){
-        console.log('Failed to set the positions of the vertices');
+    // Bind stuff for images
+    u_sampler = gl.getUniformLocation(program, "u_sampler");
+    
+    if (u_sampler < 0) {
+        console.log('failed to get uniform u_sampler');
         return;
     }
-    */
+    
+    a_texCoord = gl.getAttribLocation(program, "a_texCoord");
+    
+    if (a_texCoord < 0) {
+        console.log('failed to get attribute a_texCoord');
+        return;
+    }    
+    
     //init the time reference for first frame just befor calling animation loop
     g_last = Date.now();
             
@@ -268,9 +317,9 @@ function initVertexBuffers() {
 }
 
 function initTextureVertexBuffers() {
+            
+    // console.log("initTextureVertexBuffers WIP");
     
-    // console.log('initVertexBuffers');
-
     // number of vertices
     var n = 4;       
     
@@ -286,12 +335,12 @@ function initTextureVertexBuffers() {
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexSizeBuffer);
     
     // Interleaved
-    // x, y, z, r, g, b, a, p
+    // x, y, z, s, t, r, g, b, a, p
     var verticesColorsSizes = new Float32Array([
-        0.2, 0.0,       1.0, 0.0, 0.0, 1.0,     10.0,
-        0.6, 0.0,       1.0, 0.0, 0.0, 1.0,     10.0,                
-        0.2, 0.4,       1.0, 0.0, 0.0, 1.0,     10.0,        
-        0.6, 0.4,       1.0, 0.0, 0.0, 1.0,     10.0  
+        0.2, 0.0,   0.0, 1.0,   1.0, 0.0, 0.0, 1.0,     10.0,
+        0.6, 0.0,   0.0, 0.0,   1.0, 0.0, 0.0, 1.0,     10.0,                
+        0.2, 0.4,   1.0, 1.0,   1.0, 0.0, 0.0, 1.0,     10.0,        
+        0.6, 0.4,   1.0, 0.0,   1.0, 0.0, 0.0, 1.0,     10.0  
     ]);
     
     var FSIZE = verticesColorsSizes.BYTES_PER_ELEMENT;
@@ -300,17 +349,17 @@ function initTextureVertexBuffers() {
     gl.bufferData(gl.ARRAY_BUFFER, verticesColorsSizes, gl.STATIC_DRAW);
     
     // Assign the buffer object to a_position variable
-    gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, FSIZE * 7, 0);
+    gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, FSIZE * 9, 0);
     
     // enable the assignment to a_position variable
     gl.enableVertexAttribArray(a_position);
     
-    gl.vertexAttribPointer(a_color, 4, gl.FLOAT, false, FSIZE * 7, FSIZE * 2);
+    gl.vertexAttribPointer(a_color, 4, gl.FLOAT, false, FSIZE * 9, FSIZE * 2);
     
     gl.enableVertexAttribArray(a_color);
     
     gl.vertexAttribPointer(
-            a_pointSize, 1, gl.FLOAT, false, FSIZE * 7, FSIZE * 6);
+            a_pointSize, 1, gl.FLOAT, false, FSIZE * 9, FSIZE * 8);
     
     gl.enableVertexAttribArray(a_pointSize);
       
@@ -357,7 +406,9 @@ function renderLoop(timestamp) {
         if(!numOfTexVertices) {
             console.log('Failed to set the positions of the texture vertices');
         return -1;               
-        }
+        }                
+                       
+        loadTexture(gl, texture, u_sampler, image);
         
         drawTriangles(gl, numOfTexVertices, currentAngle, modelMatrix, u_modelMatrix, 1);
         
@@ -415,7 +466,7 @@ function drawTriangles(gl, numOfVertices, currentAngle, modelMatrix, u_modelMatr
         
         // gl.clear(gl.COLOR_BUFFER_BIT);
         
-        if(mode == 1)
+        if(mode === 1)
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, numOfVertices);                 
         else
             gl.drawArrays(gl.TRIANGLES, 0, numOfVertices);                 
@@ -448,11 +499,20 @@ function main() {
     //init model matrix
     modelMatrix = new Matrix4();
     
+    image = new Image();
+    
+    texture = gl.createTexture();
+    
+        if (!texture) {
+            console.log("failed to create texture");
+            return false;
+        }
+    
     // Load shaders from files
     loadShaderFile(gl, 'shaders//ch5_fshader.frag', gl.FRAGMENT_SHADER);
     loadShaderFile(gl, 'shaders//ch5_vshader.vert', gl.VERTEX_SHADER);
     
-    loadImageResources(gl, 'images//me.jpg');
+    loadImageResources(gl, 'images//snow.jpg');
 }
 
 
