@@ -70,7 +70,7 @@ function loadShaderFile(g1, filename, shader) {
 
 function loadImageResources(gl, filename)
 {
-    console.log("loadImageResources WIP");
+    console.log("loadImageResources");
     
     var request = new XMLHttpRequest();
     
@@ -87,21 +87,36 @@ function loadImageResources(gl, filename)
 
 function onLoadImage(g1, filename)
 {
-    console.log("onLoadImage WIP");
+    console.log("onLoadImage");
     
     image.src = filename;
     
+    console.log("image src: ");
+    console.log(image.src);
     
     console.log("waiting...");
     if(VSHADER_SOURCE && FSHADER_SOURCE)
     {
         // TBD, this will instead jump to a function that can accomadate images        
-        shaderCompile(g1);    
+        for(debugDelay = 0; debugDelay < 100; ++debugDelay)
+        {
+            shaderCompile(g1);    
+        }
     }
 }
 
 function loadTexture(gl, texture, u_sampler, image)
 {
+    /*
+    console.log("texture: ");
+    console.log(texture);
+    console.log("u_sampler");
+    console.log(u_sampler);
+    console.log("image");
+    console.log(image);
+    console.log(image.src);
+    */
+   
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
     
     gl.activeTexture(gl.TEXTURE0);
@@ -243,8 +258,8 @@ function shaderCompile(gl)
     }    
     
     //init the time reference for first frame just befor calling animation loop
-    g_last = Date.now();
-            
+    g_last = Date.now();                
+    
     window.requestAnimationFrame(renderLoop);
 }
 
@@ -406,8 +421,8 @@ function renderLoop(timestamp) {
         if(!numOfTexVertices) {
             console.log('Failed to set the positions of the texture vertices');
         return -1;               
-        }                
-                       
+        }                                                  
+                           
         loadTexture(gl, texture, u_sampler, image);
         
         drawTriangles(gl, numOfTexVertices, currentAngle, modelMatrix, u_modelMatrix, 1);
@@ -499,20 +514,27 @@ function main() {
     //init model matrix
     modelMatrix = new Matrix4();
     
-    image = new Image();
     
+    image = new Image();
+        
+    console.log("image: ");
+    console.log(image);            
+        
     texture = gl.createTexture();
+    
+    console.log("texture: ");
+    console.log(texture);
     
         if (!texture) {
             console.log("failed to create texture");
             return false;
-        }
-    
+        }            
+   
     // Load shaders from files
     loadShaderFile(gl, 'shaders//ch5_fshader.frag', gl.FRAGMENT_SHADER);
-    loadShaderFile(gl, 'shaders//ch5_vshader.vert', gl.VERTEX_SHADER);
+    loadShaderFile(gl, 'shaders//ch5_vshader.vert', gl.VERTEX_SHADER);        
     
-    loadImageResources(gl, 'images//snow.jpg');
+    loadImageResources(gl, 'resources//images//test.bmp');
 }
 
 
