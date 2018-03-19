@@ -50,6 +50,10 @@ var u_sampler = null;
 var texture = null;
 var a_texCoord = null;
 
+var fShaderLoaded = false;
+var vShaderLoaded = false;
+var imagesLoaded = false;
+
 // <editor-fold defaultstate="collasped" desc="Shader Setup">
 
 function loadShaderFile(g1, filename, shader) {
@@ -93,41 +97,25 @@ function onLoadImage(g1, filename)
     
     console.log("image src: ");
     console.log(image.src);
-    
-    console.log("waiting...");
-    if(VSHADER_SOURCE && FSHADER_SOURCE)
-    {
-        // TBD, this will instead jump to a function that can accomadate images        
-        for(debugDelay = 0; debugDelay < 100; ++debugDelay)
-        {
-            shaderCompile(g1);    
-        }
-    }
 }
 
 function loadTexture(gl, texture, u_sampler, image)
-{
-    /*
-    console.log("texture: ");
-    console.log(texture);
-    console.log("u_sampler");
-    console.log(u_sampler);
-    console.log("image");
-    console.log(image);
-    console.log(image.src);
-    */
-   
+{      
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
     
     gl.activeTexture(gl.TEXTURE0);
     
     gl.bindTexture(gl.TEXTURE_2D, texture);
     
+    //console.log(texture);
+    
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
     
-    gl.uniform1i(u_sampler, 0);
+    //console.log(image);
+    
+    gl.uniform1i(u_sampler, 0);        
 }
 
 function onLoadShader(g1, fileString, type)
@@ -136,9 +124,11 @@ function onLoadShader(g1, fileString, type)
     if (type === g1.VERTEX_SHADER)
     {
         VSHADER_SOURCE = fileString;
+        console.log('VSHADER_LOADED');        
     } else if (type === g1.FRAGMENT_SHADER)
     {
         FSHADER_SOURCE = fileString;
+        console.log('FSHADER_LOADED');
     }   
 }
 
@@ -514,7 +504,6 @@ function main() {
     //init model matrix
     modelMatrix = new Matrix4();
     
-    
     image = new Image();
         
     console.log("image: ");
@@ -525,17 +514,37 @@ function main() {
     console.log("texture: ");
     console.log(texture);
     
-        if (!texture) {
-            console.log("failed to create texture");
-            return false;
-        }            
+    if (!texture) {
+        console.log("failed to create texture");
+        return false;
+    }                
    
     // Load shaders from files
     loadShaderFile(gl, 'shaders//ch5_fshader.frag', gl.FRAGMENT_SHADER);
     loadShaderFile(gl, 'shaders//ch5_vshader.vert', gl.VERTEX_SHADER);        
     
-    loadImageResources(gl, 'resources//images//test.bmp');
+    loadImageResources(gl, '../images/sky.jpg');    
 }
+
+function delayedCompile() {            
+    console.log("Compiling...");
+       
+    for(i = 0; i < 100; ++i)
+    {
+        if(VSHADER_SOURCE && FSHADER_SOURCE)
+        {        
+            if(image)
+            {
+                shaderCompile(gl);                     
+                break;
+            }
+            else
+                console.log('no image!');
+        }
+    }          
+}
+
+setTimeout(delayedCompile, 5000);
 
 
 
