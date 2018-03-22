@@ -54,6 +54,8 @@ var fShaderLoaded = false;
 var vShaderLoaded = false;
 var imagesLoaded = false;
 
+var display_once = false;
+
 // <editor-fold defaultstate="collasped" desc="Shader Setup">
 
 function loadShaderFile(g1, filename, shader) {
@@ -95,8 +97,7 @@ function onLoadImage(g1, filename)
     
     image.src = filename;
     
-    console.log("image src: ");
-    console.log(image.src);
+    console.log("image.src: " + image.src);    
 }
 
 function loadTexture(gl, texture, u_sampler, image)
@@ -106,14 +107,18 @@ function loadTexture(gl, texture, u_sampler, image)
     gl.activeTexture(gl.TEXTURE0);
     
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    
-    //console.log(texture);
-    
+            
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
     
-    //console.log(image);
+    if(!display_once)
+    {
+        console.log("texture: " + texture);
+        console.log("image: " + image);
+        console.log("image.src: " + image.src);
+        display_once = true;
+    }
     
     gl.uniform1i(u_sampler, 0);        
 }
@@ -288,14 +293,14 @@ function initVertexBuffers() {
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexSizeBuffer);
     
     // Interleaved
-    // x, y, z, r, g, b, a, p
+    // x, y, z, s, t, r, g, b, a, p
     var verticesColorsSizes = new Float32Array([
-        0.0, 0.577,     1.0, 0.0, 0.0, 1.0,     10.0,
-        -0.5, -0.288,   0.0, 1.0, 0.0, 1.0,     20.0,
-        0.5, -0.288,    0.0, 0.0, 1.0, 1.0,     30.0,
-        0.8, 0.0,     1.0, 0.0, 0.0, 1.0,     25.0,
-        0.8, 0.5,     0.0, 1.0, 0.0, 1.0,     15.0,
-        0.4, 0.5,     0.0, 0.0, 1.0, 1.0,     50.0     
+        0.0, 0.577, 0.0,    0.0, 0.0,   1.0, 0.0, 0.0, 1.0,     10.0,
+        -0.5, -0.288, 0.0,  0.0, 0.0,   0.0, 1.0, 0.0, 1.0,     20.0,
+        0.5, -0.288, 0.0,   0.0, 0.0,   0.0, 0.0, 1.0, 1.0,     30.0,
+        0.8, 0.0, 0.0,      0.0, 0.0,   1.0, 0.0, 0.0, 1.0,     25.0,
+        0.8, 0.5, 0.0,      0.0, 0.0,   0.0, 1.0, 0.0, 1.0,     15.0,
+        0.4, 0.5, 0.0,      0.0, 0.0,   0.0, 0.0, 1.0, 1.0,     50.0     
     ]);
     
     var FSIZE = verticesColorsSizes.BYTES_PER_ELEMENT;
@@ -304,20 +309,24 @@ function initVertexBuffers() {
     gl.bufferData(gl.ARRAY_BUFFER, verticesColorsSizes, gl.STATIC_DRAW);
     
     // Assign the buffer object to a_position variable
-    gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, FSIZE * 7, 0);
+    gl.vertexAttribPointer(a_position, 3, gl.FLOAT, false, FSIZE * 10, 0);
     
     // enable the assignment to a_position variable
     gl.enableVertexAttribArray(a_position);
     
-    gl.vertexAttribPointer(a_color, 4, gl.FLOAT, false, FSIZE * 7, FSIZE * 2);
+    gl.vertexAttribPointer(a_color, 4, gl.FLOAT, false, FSIZE * 10, FSIZE * 5);
     
     gl.enableVertexAttribArray(a_color);
     
     gl.vertexAttribPointer(
-            a_pointSize, 1, gl.FLOAT, false, FSIZE * 7, FSIZE * 6);
+            a_pointSize, 1, gl.FLOAT, false, FSIZE * 10, FSIZE * 9);
     
     gl.enableVertexAttribArray(a_pointSize);
       
+    gl.vertexAttribPointer(a_texCoord, 2, gl.FLOAT, false, FSIZE * 10, FSIZE * 3);
+    
+    gl.enableVertexAttribArray(a_texCoord);
+    
     return n;
 }
 
@@ -342,10 +351,10 @@ function initTextureVertexBuffers() {
     // Interleaved
     // x, y, z, s, t, r, g, b, a, p
     var verticesColorsSizes = new Float32Array([
-        0.2, 0.0,   0.0, 1.0,   1.0, 0.0, 0.0, 1.0,     10.0,
-        0.6, 0.0,   0.0, 0.0,   1.0, 0.0, 0.0, 1.0,     10.0,                
-        0.2, 0.4,   1.0, 1.0,   1.0, 0.0, 0.0, 1.0,     10.0,        
-        0.6, 0.4,   1.0, 0.0,   1.0, 0.0, 0.0, 1.0,     10.0  
+        0.2, 0.0, 0.0,  0.0, 1.0,   1.0, 1.0, 1.0, 1.0,     10.0,
+        0.6, 0.0, 0.0,  0.0, 0.0,   1.0, 1.0, 1.0, 1.0,     10.0,                
+        0.2, 0.4, 0.0,  1.0, 1.0,   1.0, 1.0, 1.0, 1.0,     10.0,        
+        0.6, 0.4, 0.0,  1.0, 0.0,   1.0, 1.0, 1.0, 1.0,     10.0  
     ]);
     
     var FSIZE = verticesColorsSizes.BYTES_PER_ELEMENT;
@@ -354,19 +363,23 @@ function initTextureVertexBuffers() {
     gl.bufferData(gl.ARRAY_BUFFER, verticesColorsSizes, gl.STATIC_DRAW);
     
     // Assign the buffer object to a_position variable
-    gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, FSIZE * 9, 0);
+    gl.vertexAttribPointer(a_position, 3, gl.FLOAT, false, FSIZE * 10, 0);
     
     // enable the assignment to a_position variable
     gl.enableVertexAttribArray(a_position);
     
-    gl.vertexAttribPointer(a_color, 4, gl.FLOAT, false, FSIZE * 9, FSIZE * 2);
+    gl.vertexAttribPointer(a_color, 4, gl.FLOAT, false, FSIZE * 10, FSIZE * 5);
     
     gl.enableVertexAttribArray(a_color);
     
     gl.vertexAttribPointer(
-            a_pointSize, 1, gl.FLOAT, false, FSIZE * 9, FSIZE * 8);
+            a_pointSize, 1, gl.FLOAT, false, FSIZE * 10, FSIZE * 9);
     
     gl.enableVertexAttribArray(a_pointSize);
+    
+    gl.vertexAttribPointer(a_texCoord, 2, gl.FLOAT, false, FSIZE * 10, FSIZE * 3);
+    
+    gl.enableVertexAttribArray(a_texCoord);
       
     return n;
 }
@@ -394,8 +407,13 @@ function renderLoop(timestamp) {
         
         clear(gl);
         
+        loadTexture(gl, texture, u_sampler, image);
+        
         // init the vertices - init here for testing to see if I can combine render operations
         // looks like I can
+        
+        // REMEMBER, ONLY ONE ARRAY_BUFFER TO WORK WITH. NEED TO FIGURE OUT A WAY TO COMPOSITE WITH OVERWRITING IN MIND
+        ///*
         numOfVertices = initVertexBuffers();
 
         if (numOfVertices < 0){
@@ -405,17 +423,18 @@ function renderLoop(timestamp) {
         
         // magic number, 1 = TRIANGLE_STRIP, anything else is TRIANGLES
         drawTriangles(gl, numOfVertices, currentAngle, modelMatrix, u_modelMatrix, 0);
-                
+        //*/
+              
+        ///*
         var numOfTexVertices = initTextureVertexBuffers();
         
         if(!numOfTexVertices) {
             console.log('Failed to set the positions of the texture vertices');
         return -1;               
         }                                                  
-                           
-        loadTexture(gl, texture, u_sampler, image);
-        
+                                           
         drawTriangles(gl, numOfTexVertices, currentAngle, modelMatrix, u_modelMatrix, 1);
+        //*/
         
         renderLoopUpdateCounter = 0;        
     }
@@ -472,9 +491,15 @@ function drawTriangles(gl, numOfVertices, currentAngle, modelMatrix, u_modelMatr
         // gl.clear(gl.COLOR_BUFFER_BIT);
         
         if(mode === 1)
+        {
+            //console.log("mode 1");
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, numOfVertices);                 
+        }
         else
+        {
+            //console.log("mode 2");
             gl.drawArrays(gl.TRIANGLES, 0, numOfVertices);                 
+        }
 }
 
 function clear(gl)
