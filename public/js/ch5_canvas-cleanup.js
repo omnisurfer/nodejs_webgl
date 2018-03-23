@@ -14,49 +14,49 @@ var a_position = 0.0;
 var a_pointSize = null;
 var a_color = null;
 var u_translation = null;
-var u_cosB = null;
-var u_sinB = null;
 
 var u_width = null;
 var u_height = null;
 
-var Tx = 0.0, Ty = 0.0, Tz = 0.0;
-var Sx = 0.0, Sy = 0.0, Sz = 0.0;
-var angleDeg = 0.0;
-var numOfVertices = 0;
-
-//in degrees/s
-var ANGLE_STEP = 58.0;
-var currentAngle = 0.0;
-//time when last frame was updated
-var g_last = 0.0;
-
 var u_modelMatrix = null;
-var modelMatrix = null;
 
-var renderLoopUpdateDebugLimit = 0;
-var renderLoopUpdateCounter = 0;
+var u_sampler = null;
+var a_texCoord = null;
+
+var image = null;
+var texture = null;
 
 var gl = null;
 
-// Stores mouse presses
-var g_points = [];
-
+// Shader Variables
 var VSHADER_SOURCE = null;
 var FSHADER_SOURCE = null;
-
-var image = null;
-var u_sampler = null;
-var texture = null;
-var a_texCoord = null;
 
 var fShaderLoaded = false;
 var vShaderLoaded = false;
 var imagesLoaded = false;
 
+// Animation Translation Variables
+//in degrees/s
+var ANGLE_STEP = 58.0;
+var currentAngle = 0.0;
+var angleDeg = 0.0;
+
+var Tx = 0.0, Ty = 0.0, Tz = 0.0;
+var Sx = 0.0, Sy = 0.0, Sz = 0.0;
+
+// Animate and Render Loop Timing Variables
+//time when last frame was updated
+var g_last = 0.0;
+var renderLoopUpdateDebugLimit = 0;
+var renderLoopUpdateCounter = 0;
+
+// Click Event Variable
+var g_points = [];
+
 var display_once = false;
 
-// <editor-fold defaultstate="collasped" desc="Shader Setup">
+// <editor-fold defaultstate="collasped" desc="Load Resources">
 
 function loadShaderFile(g1, filename, shader) {
     console.log('loadShaderFile');
@@ -72,6 +72,20 @@ function loadShaderFile(g1, filename, shader) {
 
     request.open('GET', filename, true);
     request.send();
+}
+
+function onLoadShader(g1, fileString, type)
+{
+    console.log('onLoadShader');
+    if (type === g1.VERTEX_SHADER)
+    {
+        VSHADER_SOURCE = fileString;
+        console.log('VSHADER_LOADED');        
+    } else if (type === g1.FRAGMENT_SHADER)
+    {
+        FSHADER_SOURCE = fileString;
+        console.log('FSHADER_LOADED');
+    }   
 }
 
 function loadImageResources(gl, filename)
@@ -112,6 +126,7 @@ function loadTexture(gl, texture, u_sampler, image)
     
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
     
+    /* DEBUG CODE TO CHECK GL TEXTURE AND IMAGE
     if(!display_once)
     {
         console.log("texture: " + texture);
@@ -119,30 +134,20 @@ function loadTexture(gl, texture, u_sampler, image)
         console.log("image.src: " + image.src);
         display_once = true;
     }
-    
+    */
+   
     gl.uniform1i(u_sampler, 0);        
 }
 
-function onLoadShader(g1, fileString, type)
-{
-    console.log('onLoadShader');
-    if (type === g1.VERTEX_SHADER)
-    {
-        VSHADER_SOURCE = fileString;
-        console.log('VSHADER_LOADED');        
-    } else if (type === g1.FRAGMENT_SHADER)
-    {
-        FSHADER_SOURCE = fileString;
-        console.log('FSHADER_LOADED');
-    }   
-}
+// </editor-fold>
 
-function shaderCompile(gl)
+// <editor-fold defaultstate="collasped" desc="Shader Composition">
+function shaderSetup(gl)
 {
-    console.log('shaderCompile');
+    console.log('shaderSetup');
 
-    var vshader = createShader(gl, VSHADER_SOURCE, gl.VERTEX_SHADER);
-    var fshader = createShader(gl, FSHADER_SOURCE, gl.FRAGMENT_SHADER);
+    var vshader = shaderCompile(gl, VSHADER_SOURCE, gl.VERTEX_SHADER);
+    var fshader = shaderCompile(gl, FSHADER_SOURCE, gl.FRAGMENT_SHADER);
 
     // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/createProgram
 
@@ -180,21 +185,7 @@ function shaderCompile(gl)
         console.log('failed to get attribute u_translation');
         return;
     }
-    
-    u_cosB = gl.getUniformLocation(program, 'u_cosB');
-    
-    if (u_cosB < 0) {
-        console.log('failed to get attribute u_cosB');
-        return;
-    }
-    
-    u_sinB = gl.getUniformLocation(program, 'u_sinB');
-    
-    if (u_sinB < 0) {
-        console.log('failed to get attribute u_sinB');
-        return;
-    }
-
+      
     a_position = gl.getAttribLocation(program, "a_position");
 
     if (a_position < 0) {
@@ -259,9 +250,9 @@ function shaderCompile(gl)
 }
 
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGLShader
-function createShader(gl, sourceCode, type) {
+function shaderCompile(gl, sourceCode, type) {
 
-    console.log('createShader');
+    console.log('shaderCompile');
 
     var shader = gl.createShader(type);
     gl.shaderSource(shader, sourceCode);
@@ -273,28 +264,17 @@ function createShader(gl, sourceCode, type) {
     }
     return shader;
 }
+// </editor-fold>
+
+// <editor-fold defaultstate="collasped" desc="Init Vertex Buffers">
 
 function initVertexBuffers() {
     
     // console.log('initVertexBuffers');
 
-    // number of vertices
-    var n = 6;       
-    
-    //create a buffer object to store the vertices
-    var vertexSizeBuffer = gl.createBuffer();
-    
-    if(!vertexSizeBuffer) {
-        console.log('Failed to create vertexBuffer object.');
-        return -1;
-    }
-   
-    //bind the buffer object to GL memory space
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexSizeBuffer);
-    
-    // Interleaved
-    // x, y, z, s, t, r, g, b, a, p
-    var verticesColorsSizes = new Float32Array([
+    // Vertices, Interleaved
+    // x, y, z,     s, t,   r, g, b, a,     p
+    var verticesXYZsTrGBAp = new Float32Array([
         0.0, 0.577, 0.0,    0.0, 0.0,   1.0, 0.0, 0.0, 1.0,     10.0,
         -0.5, -0.288, 0.0,  0.0, 0.0,   0.0, 1.0, 0.0, 1.0,     20.0,
         0.5, -0.288, 0.0,   0.0, 0.0,   0.0, 0.0, 1.0, 1.0,     30.0,
@@ -303,26 +283,40 @@ function initVertexBuffers() {
         0.4, 0.5, 0.0,      0.0, 0.0,   0.0, 0.0, 1.0, 1.0,     50.0     
     ]);
     
-    var FSIZE = verticesColorsSizes.BYTES_PER_ELEMENT;
+    // number of vertices
+    var n = 6;   
+        
+    var vertexSizeBuffer = gl.createBuffer();
     
-    //write the data to the buffer object
-    gl.bufferData(gl.ARRAY_BUFFER, verticesColorsSizes, gl.STATIC_DRAW);
+    if(!vertexSizeBuffer) {
+        console.log('Failed to create vertexBuffer object.');
+        return -1;
+    }
+   
+    // Array Buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexSizeBuffer);   
     
-    // Assign the buffer object to a_position variable
+    var FSIZE = verticesXYZsTrGBAp.BYTES_PER_ELEMENT;
+       
+    gl.bufferData(gl.ARRAY_BUFFER, verticesXYZsTrGBAp, gl.DYNAMIC_DRAW);
+    
+    // Position
     gl.vertexAttribPointer(a_position, 3, gl.FLOAT, false, FSIZE * 10, 0);
-    
-    // enable the assignment to a_position variable
+       
     gl.enableVertexAttribArray(a_position);
     
+    // Color
     gl.vertexAttribPointer(a_color, 4, gl.FLOAT, false, FSIZE * 10, FSIZE * 5);
     
     gl.enableVertexAttribArray(a_color);
     
+    // Point Size
     gl.vertexAttribPointer(
             a_pointSize, 1, gl.FLOAT, false, FSIZE * 10, FSIZE * 9);
     
     gl.enableVertexAttribArray(a_pointSize);
       
+    // Texture Coord
     gl.vertexAttribPointer(a_texCoord, 2, gl.FLOAT, false, FSIZE * 10, FSIZE * 3);
     
     gl.enableVertexAttribArray(a_texCoord);
@@ -334,49 +328,50 @@ function initTextureVertexBuffers() {
             
     // console.log("initTextureVertexBuffers WIP");
     
-    // number of vertices
-    var n = 4;       
-    
-    //create a buffer object to store the vertices
-    var vertexSizeBuffer = gl.createBuffer();
-    
-    if(!vertexSizeBuffer) {
-        console.log('Failed to create vertexBuffer object.');
-        return -1;
-    }
-   
-    //bind the buffer object to GL memory space
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexSizeBuffer);
-    
-    // Interleaved
-    // x, y, z, s, t, r, g, b, a, p
-    var verticesColorsSizes = new Float32Array([
+    // Vertices, Interleaved
+    // x, y, z,     s, t,   r, g, b, a,     p
+    var verticesXYZsTrGBAp = new Float32Array([
         0.2, 0.0, 0.0,  0.0, 1.0,   1.0, 1.0, 1.0, 1.0,     10.0,
         0.6, 0.0, 0.0,  0.0, 0.0,   1.0, 1.0, 1.0, 1.0,     10.0,                
         0.2, 0.4, 0.0,  1.0, 1.0,   1.0, 1.0, 1.0, 1.0,     10.0,        
         0.6, 0.4, 0.0,  1.0, 0.0,   1.0, 1.0, 1.0, 1.0,     10.0  
     ]);
     
-    var FSIZE = verticesColorsSizes.BYTES_PER_ELEMENT;
+    // number of vertices
+    var n = 4;       
     
-    //write the data to the buffer object
-    gl.bufferData(gl.ARRAY_BUFFER, verticesColorsSizes, gl.STATIC_DRAW);
+    // Vertex Buffer
+    var vertexSizeBuffer = gl.createBuffer();
     
-    // Assign the buffer object to a_position variable
+    if(!vertexSizeBuffer) {
+        console.log('Failed to create vertexBuffer object.');
+        return -1;
+    }
+    
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexSizeBuffer);
+    
+    //Array Buffer
+    var FSIZE = verticesXYZsTrGBAp.BYTES_PER_ELEMENT;
+    
+    gl.bufferData(gl.ARRAY_BUFFER, verticesXYZsTrGBAp, gl.DYNAMIC_DRAW);
+    
+    //Position
     gl.vertexAttribPointer(a_position, 3, gl.FLOAT, false, FSIZE * 10, 0);
-    
-    // enable the assignment to a_position variable
+        
     gl.enableVertexAttribArray(a_position);
     
+    //Color
     gl.vertexAttribPointer(a_color, 4, gl.FLOAT, false, FSIZE * 10, FSIZE * 5);
     
     gl.enableVertexAttribArray(a_color);
     
+    //Point Size
     gl.vertexAttribPointer(
             a_pointSize, 1, gl.FLOAT, false, FSIZE * 10, FSIZE * 9);
     
     gl.enableVertexAttribArray(a_pointSize);
     
+    //Texture Coord
     gl.vertexAttribPointer(a_texCoord, 2, gl.FLOAT, false, FSIZE * 10, FSIZE * 3);
     
     gl.enableVertexAttribArray(a_texCoord);
@@ -384,86 +379,9 @@ function initTextureVertexBuffers() {
     return n;
 }
 
-// <editor-fold>
+// </editor-fold>
 
-// <editor-fold defaultstate="collasped" desc="Async Functions">
-
-// https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame
-function renderLoop(timestamp) {
-
-    if (renderLoopUpdateCounter > renderLoopUpdateDebugLimit)
-    {
-        // console.log('enter: renderLoop');        
-
-        // gl.vertexAttrib1f(a_size, 10.0);
-
-        // gl.uniform1f(u_time, timestamp / 1000.0);                              
-        
-        gl.uniform1f(u_width, 800.0);
-        
-        gl.uniform1f(u_height, 800.0);
-        
-        currentAngle = animate(currentAngle);
-        
-        clear(gl);
-        
-        loadTexture(gl, texture, u_sampler, image);
-        
-        // init the vertices - init here for testing to see if I can combine render operations
-        // looks like I can
-        
-        // REMEMBER, ONLY ONE ARRAY_BUFFER TO WORK WITH. NEED TO FIGURE OUT A WAY TO COMPOSITE WITH OVERWRITING IN MIND
-        ///*
-        numOfVertices = initVertexBuffers();
-
-        if (numOfVertices < 0){
-            console.log('Failed to set the positions of the vertices');
-            return;
-        }
-        
-        // magic number, 1 = TRIANGLE_STRIP, anything else is TRIANGLES
-        drawTriangles(gl, numOfVertices, currentAngle, modelMatrix, u_modelMatrix, 0);
-        //*/
-              
-        ///*
-        var numOfTexVertices = initTextureVertexBuffers();
-        
-        if(!numOfTexVertices) {
-            console.log('Failed to set the positions of the texture vertices');
-        return -1;               
-        }                                                  
-                                           
-        drawTriangles(gl, numOfTexVertices, currentAngle, modelMatrix, u_modelMatrix, 1);
-        //*/
-        
-        renderLoopUpdateCounter = 0;        
-    }
-    else
-        renderLoopUpdateCounter++;
-    
-    window.requestAnimationFrame(renderLoop);
-}
-
-function clickEvent(ev, gl, canvas, a_position) {
-
-    console.log('clickEvent');
-
-    var x = ev.clientX;
-    var y = ev.clientY;
-    var rect = ev.target.getBoundingClientRect();
-
-    x = ((x - rect.left) - canvas.width / 2) / (canvas.width / 2);
-            
-    y = (canvas.height / 2 - (y - rect.top)) / (canvas.height / 2);
-
-    console.log('x: ' + x);
-    console.log('y: ' + y);
-            
-    console.log('rect.left: ' + rect.left);
-    console.log('rect.top: ' + rect.top);
-
-    g_points.push([x, y]);
-}
+// <editor-fold defaultstate="collasped" desc="Animate and Render">
 
 function animate(angle)
 {
@@ -478,7 +396,7 @@ function animate(angle)
     return newAngle %= 360;
 }
 
-function drawTriangles(gl, numOfVertices, currentAngle, modelMatrix, u_modelMatrix, mode)
+function drawTriangles(gl, numOfVertices, currentAngle, u_modelMatrix, mode)
 {                
         var _modelMatrix = new Matrix4();
                 
@@ -510,6 +428,94 @@ function clear(gl)
         
     gl.clear(gl.COLOR_BUFFER_BIT);
 }
+
+// https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame
+function renderLoop(timestamp) {
+
+    if (renderLoopUpdateCounter > renderLoopUpdateDebugLimit)
+    {
+        // console.log('enter: renderLoop');        
+
+        // gl.vertexAttrib1f(a_size, 10.0);
+
+        // gl.uniform1f(u_time, timestamp / 1000.0);                              
+        
+        if(!display_once)
+        {
+            console.log('display once');
+            
+            gl.uniform1f(u_width, 800.0);
+        
+            gl.uniform1f(u_height, 800.0);
+            
+            loadTexture(gl, texture, u_sampler, image);
+            
+            display_once = true;
+        }
+        currentAngle = animate(currentAngle);
+        
+        clear(gl);                
+        
+        // init the vertices - init here for testing to see if I can combine render operations
+        // looks like I can
+        
+        // REMEMBER, ONLY ONE ARRAY_BUFFER TO WORK WITH. NEED TO FIGURE OUT A WAY TO COMPOSITE WITH OVERWRITING IN MIND
+        ///*
+        var numOfVertices = initVertexBuffers();
+
+        if (numOfVertices < 0){
+            console.log('Failed to set the positions of the vertices');
+            return;
+        }
+        
+        // magic number, 1 = TRIANGLE_STRIP, anything else is TRIANGLES
+        drawTriangles(gl, numOfVertices, currentAngle, u_modelMatrix, 0);
+        //*/
+              
+        ///*
+        var numOfTexVertices = initTextureVertexBuffers();
+        
+        if(!numOfTexVertices) {
+            console.log('Failed to set the positions of the texture vertices');
+        return -1;               
+        }                                                  
+                                           
+        drawTriangles(gl, numOfTexVertices, currentAngle, u_modelMatrix, 1);
+        //*/
+        
+        renderLoopUpdateCounter = 0;        
+    }
+    else
+        renderLoopUpdateCounter++;
+    
+    window.requestAnimationFrame(renderLoop);
+}
+
+// </editor-fold>
+
+// <editor-fold defaultstate="collasped" desc="Event Handlers">
+
+function clickEvent(ev, gl, canvas, a_position) {
+
+    console.log('clickEvent');
+
+    var x = ev.clientX;
+    var y = ev.clientY;
+    var rect = ev.target.getBoundingClientRect();
+
+    x = ((x - rect.left) - canvas.width / 2) / (canvas.width / 2);
+            
+    y = (canvas.height / 2 - (y - rect.top)) / (canvas.height / 2);
+
+    console.log('x: ' + x);
+    console.log('y: ' + y);
+            
+    console.log('rect.left: ' + rect.left);
+    console.log('rect.top: ' + rect.top);
+
+    g_points.push([x, y]);
+}
+
 // </editor-fold>
 
 function main() {
@@ -562,7 +568,7 @@ function delayedCompile() {
         {        
             if(image)
             {
-                shaderCompile(gl);                     
+                shaderSetup(gl);                     
                 break;
             }
             else

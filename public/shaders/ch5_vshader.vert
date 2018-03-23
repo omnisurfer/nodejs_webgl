@@ -2,7 +2,6 @@ precision mediump float;
 
 uniform float u_time;
 uniform vec4 u_translation;
-uniform float u_cosB, u_sinB;
 
 uniform mat4 u_modelMatrix;
 
