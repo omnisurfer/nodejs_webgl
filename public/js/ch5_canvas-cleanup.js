@@ -10,18 +10,48 @@
 
 
 var u_time = null;
+var u_width = null;
+var u_height = null;
+var u_modelMatrix = null;
+var u_sampler = null;
+
 var a_position = 0.0;
 var a_pointSize = null;
 var a_color = null;
-var u_translation = null;
-
-var u_width = null;
-var u_height = null;
-
-var u_modelMatrix = null;
-
-var u_sampler = null;
 var a_texCoord = null;
+
+// Look into creating a constructor function:
+// https://hackernoon.com/prototypes-in-javascript-5bba2990e04bs
+
+var displayAsset =
+{
+    'shaders':{
+        'vertexSource':null,
+        'fragmentSource':null,
+        
+        'uniforms':{
+            'u_time':null,
+            'u_width':null,
+            'u_height':null,        
+            'u_modelMatrix':null,
+            'u_sampler':null
+        },
+    
+        'attributes':{
+            'a_position':null,
+            'a_color':null,
+            'a_pointSize':null,
+            'a_texCoord':null
+        }
+    },
+     
+    'vertexArray':null,
+    
+    'imageArray':null,
+    'textureArray':null,
+    
+    'animationKernel':null
+};
 
 var image = null;
 var texture = null;
@@ -41,9 +71,6 @@ var imagesLoaded = false;
 var ANGLE_STEP = 58.0;
 var currentAngle = 0.0;
 var angleDeg = 0.0;
-
-var Tx = 0.0, Ty = 0.0, Tz = 0.0;
-var Sx = 0.0, Sy = 0.0, Sz = 0.0;
 
 // Animate and Render Loop Timing Variables
 //time when last frame was updated
@@ -144,7 +171,7 @@ function loadTexture(gl, texture, u_sampler, image)
 // <editor-fold defaultstate="collasped" desc="Shader Composition">
 function shaderSetup(gl)
 {
-    console.log('shaderSetup');
+    console.log('shaderSetup - edit@1040');
 
     var vshader = shaderCompile(gl, VSHADER_SOURCE, gl.VERTEX_SHADER);
     var fshader = shaderCompile(gl, FSHADER_SOURCE, gl.FRAGMENT_SHADER);
@@ -152,7 +179,7 @@ function shaderSetup(gl)
     // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/createProgram
 
     var program = gl.createProgram();
-
+    
     gl.attachShader(program, vshader);
     gl.attachShader(program, fshader);
 
@@ -163,48 +190,29 @@ function shaderSetup(gl)
         var info = gl.getProgramInfoLog(program);
         throw 'Could not compile WebGL program. \n\n' + info;
     }
-
-    if (!initShaders(gl, VSHADER_SOURCE, FSHADER_SOURCE)) {
-        console.log('Failed to init shaders.');
-        return;
-    }
-
+   
     // https://stackoverflow.com/questions/14413713/webgl-invalid-operation-uniform1i-location-not-for-current-program
     gl.useProgram(program);
+    
+    setupUniforms(gl, program);
+    
+    setupAttributes(gl, program);
+ 
+    //init the time reference for first frame just befor calling animation loop
+    g_last = Date.now();                
+    
+    window.requestAnimationFrame(renderLoop);
+}
 
-    u_time = gl.getUniformLocation(program, "u_time");
+function setupUniforms(gl, program)
+{
+    console.log('setupUniforms');
+    
+     u_time = gl.getUniformLocation(program, "u_time");
 
     if (u_time < 0) {
         console.log('failed to get uniform time');
         return;
-    }
-
-    u_translation = gl.getUniformLocation(program, 'u_translation');
-    
-    if (u_translation < 0) {
-        console.log('failed to get attribute u_translation');
-        return;
-    }
-      
-    a_position = gl.getAttribLocation(program, "a_position");
-
-    if (a_position < 0) {
-        console.log('failed to get attribute position');
-        return;
-    }
-        
-    a_pointSize = gl.getAttribLocation(program, "a_pointSize");
-
-    if (a_pointSize < 0) {
-        console.log('failed to get attribute a_pointSize');
-        return;
-    }
-    
-    a_color = gl.getAttribLocation(program, "a_color");
-    
-    if (a_color < 0) {
-        console.log('failed to get attribute a_color');
-        return;    
     }
    
     u_modelMatrix = gl.getUniformLocation(program, "u_modelMatrix");
@@ -235,18 +243,39 @@ function shaderSetup(gl)
         console.log('failed to get uniform u_sampler');
         return;
     }
+}
+
+function setupAttributes(gl, program)
+{
+    console.log('setupAtributes');
+    
+    a_position = gl.getAttribLocation(program, "a_position");
+
+    if (a_position < 0) {
+        console.log('failed to get attribute position');
+        return;
+    }
+        
+    a_pointSize = gl.getAttribLocation(program, "a_pointSize");
+
+    if (a_pointSize < 0) {
+        console.log('failed to get attribute a_pointSize');
+        return;
+    }
+    
+    a_color = gl.getAttribLocation(program, "a_color");
+    
+    if (a_color < 0) {
+        console.log('failed to get attribute a_color');
+        return;    
+    }
     
     a_texCoord = gl.getAttribLocation(program, "a_texCoord");
     
     if (a_texCoord < 0) {
         console.log('failed to get attribute a_texCoord');
         return;
-    }    
-    
-    //init the time reference for first frame just befor calling animation loop
-    g_last = Date.now();                
-    
-    window.requestAnimationFrame(renderLoop);
+    }      
 }
 
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGLShader
@@ -442,7 +471,7 @@ function renderLoop(timestamp) {
         
         if(!display_once)
         {
-            console.log('display once');
+            console.log('renderLoop (displays once)');
             
             gl.uniform1f(u_width, 800.0);
         
@@ -516,11 +545,33 @@ function clickEvent(ev, gl, canvas, a_position) {
     g_points.push([x, y]);
 }
 
+function delayedCompile() {            
+    console.log("Compiling...");
+       
+    for(i = 0; i < 100; ++i)
+    {
+        if(VSHADER_SOURCE && FSHADER_SOURCE)
+        {        
+            if(image)
+            {
+                shaderSetup(gl);                     
+                break;
+            }
+            else
+                console.log('no image!');
+        }
+    }          
+}
+
+setTimeout(delayedCompile, 5000);
+
 // </editor-fold>
 
 function main() {
     console.log('main');
-    // Retrieve <canvas> element
+    
+    console.log(displayAssets);        
+    
     var canvas = document.getElementById('webgl');
 
     gl = getWebGLContext(canvas);
@@ -558,29 +609,3 @@ function main() {
     
     loadImageResources(gl, '../images/sky.jpg');    
 }
-
-function delayedCompile() {            
-    console.log("Compiling...");
-       
-    for(i = 0; i < 100; ++i)
-    {
-        if(VSHADER_SOURCE && FSHADER_SOURCE)
-        {        
-            if(image)
-            {
-                shaderSetup(gl);                     
-                break;
-            }
-            else
-                console.log('no image!');
-        }
-    }          
-}
-
-setTimeout(delayedCompile, 5000);
-
-
-
-
-
-
