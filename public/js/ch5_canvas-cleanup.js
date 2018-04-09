@@ -25,14 +25,31 @@ var a_texCoord = null;
 
 var displayAsset =
 {
-    'shaders':{
-        'vertexSource':null,
-        'fragmentSource':null,
+    'assetName':'testAsset',
+    
+    'sharedCanvas':{
+        'u_width':800,
+        'u_height':800
+    },
+    
+    'shader':{
+        'vertexSource':'shaders/ch5_vshader.vert',
+        'fragmentSource':'shaders/ch5_fshader.frag',
+      
+        'vertexArray': new Float32Array([
+        0.25, 0.0, 0.0,  0.0, 1.0,   1.0, 1.0, 1.0, 1.0,     10.0,
+        0.6, 0.0, 0.0,  0.0, 0.0,   1.0, 1.0, 1.0, 1.0,     10.0,                
+        0.2, 0.4, 0.0,  1.0, 1.0,   1.0, 1.0, 1.0, 1.0,     10.0,        
+        0.6, 0.4, 0.0,  1.0, 0.0,   1.0, 1.0, 1.0, 1.0,     10.0  
+        ]),
+        
+        'imageArray':[
+            'images/snow.jpg'
+        ],
+        'textureArray':null,
         
         'uniforms':{
-            'u_time':null,
-            'u_width':null,
-            'u_height':null,        
+            'u_time':null,                
             'u_modelMatrix':null,
             'u_sampler':null
         },
@@ -43,14 +60,47 @@ var displayAsset =
             'a_pointSize':null,
             'a_texCoord':null
         }
+    },     
+    
+    'animatation':
+    {
+        'kernelSource':null,
+        'timeNow':null,
+        'timeLast':null
     },
-     
-    'vertexArray':null,
     
-    'imageArray':null,
-    'textureArray':null,
-    
-    'animationKernel':null
+    'render':{
+        'kernelSource':null,
+        drawStuff() {
+            console.log('render.drawStuff')
+            /*
+            var _modelMatrix = new Matrix4();
+
+            _modelMatrix.setRotate(currentAngle, 0, 0, 1);                
+
+            _modelMatrix.scale(2.0, 2.0, 2.0);
+
+            _modelMatrix.translate(0, 0, 0);                      
+
+            gl.uniformMatrix4fv(this.shader.uniforms.u_modelMatrix, false, _modelMatrix.elements);
+
+            // gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+            // gl.clear(gl.COLOR_BUFFER_BIT);
+
+            if(mode === 1)
+            {
+                //console.log("mode 1");
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, numOfVertices);                 
+            }
+            else
+            {
+                //console.log("mode 2");
+                gl.drawArrays(gl.TRIANGLES, 0, numOfVertices);                 
+            }
+            */
+        }
+    }
 };
 
 var image = null;
@@ -151,17 +201,7 @@ function loadTexture(gl, texture, u_sampler, image)
             
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
-    
-    /* DEBUG CODE TO CHECK GL TEXTURE AND IMAGE
-    if(!display_once)
-    {
-        console.log("texture: " + texture);
-        console.log("image: " + image);
-        console.log("image.src: " + image.src);
-        display_once = true;
-    }
-    */
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);    
    
     gl.uniform1i(u_sampler, 0);        
 }
@@ -428,8 +468,10 @@ function animate(angle)
 function drawTriangles(gl, numOfVertices, currentAngle, u_modelMatrix, mode)
 {                
         var _modelMatrix = new Matrix4();
-                
-        _modelMatrix.setRotate(currentAngle, 0, 0, 1);
+                                
+        _modelMatrix.setRotate(currentAngle, 0, 0, 1);                
+        
+        _modelMatrix.scale(2.0, 2.0, 2.0);
         
         _modelMatrix.translate(0, 0, 0);                      
         
@@ -569,8 +611,12 @@ setTimeout(delayedCompile, 5000);
 
 function main() {
     console.log('main');
+           
+    displayAsset.shader.imageArray.push('hello');
     
-    console.log(displayAssets);        
+    displayAsset.render.drawStuff();
+    
+    console.log(displayAsset);        
     
     var canvas = document.getElementById('webgl');
 
@@ -604,8 +650,8 @@ function main() {
     }                
    
     // Load shaders from files
-    loadShaderFile(gl, 'shaders//ch5_fshader.frag', gl.FRAGMENT_SHADER);
-    loadShaderFile(gl, 'shaders//ch5_vshader.vert', gl.VERTEX_SHADER);        
+    loadShaderFile(gl, 'shaders/ch5_fshader.frag', gl.FRAGMENT_SHADER);
+    loadShaderFile(gl, 'shaders/ch5_vshader.vert', gl.VERTEX_SHADER);        
     
-    loadImageResources(gl, '../images/sky.jpg');    
+    loadImageResources(gl, 'images/snow2.jpg');    
 }
