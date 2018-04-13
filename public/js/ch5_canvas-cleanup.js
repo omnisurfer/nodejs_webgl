@@ -64,15 +64,15 @@ var displayAsset =
     
     'animatation':
     {
-        'kernelSource':null,
+        'kernelSource':'kernels/animation.js',
         'timeNow':null,
         'timeLast':null
     },
     
     'render':{
-        'kernelSource':null,
+        'kernelSource':'kernels/render.js',
         drawStuff() {
-            console.log('render.drawStuff')
+            console.log('render.drawStuff');
             /*
             var _modelMatrix = new Matrix4();
 
@@ -147,6 +147,8 @@ function loadShaderFile(g1, filename, shader) {
                 }
             };
 
+    console.log(filename);
+    
     request.open('GET', filename, true);
     request.send();
 }
@@ -162,7 +164,18 @@ function onLoadShader(g1, fileString, type)
     {
         FSHADER_SOURCE = fileString;
         console.log('FSHADER_LOADED');
-    }   
+    }
+    else
+    {
+        // works but maybe not best appproach
+        // https://stackoverflow.com/questions/950087/how-do-i-include-a-javascript-file-in-another-javascript-file
+        var script = document.createElement("script");
+        
+        //console.log(fileString);
+        script.src = '../displayAssets/testAsset/kernels/animation.js';
+        
+        document.head.appendChild(script);
+    }
 }
 
 function loadImageResources(gl, filename)
@@ -242,80 +255,80 @@ function shaderSetup(gl)
     g_last = Date.now();                
     
     window.requestAnimationFrame(renderLoop);
-}
+    
+    function setupUniforms(gl, program)
+    {
+        console.log('setupUniforms');
 
-function setupUniforms(gl, program)
-{
-    console.log('setupUniforms');
-    
-     u_time = gl.getUniformLocation(program, "u_time");
+         u_time = gl.getUniformLocation(program, "u_time");
 
-    if (u_time < 0) {
-        console.log('failed to get uniform time');
-        return;
-    }
-   
-    u_modelMatrix = gl.getUniformLocation(program, "u_modelMatrix");
-    
-    if (u_modelMatrix < 0) {
-            console.log('failed to get attribute u_modelMatrix');
-        return;
-    }
-    
-    u_width = gl.getUniformLocation(program, "u_width");
-    
-    if (u_width < 0) {
-            console.log('failed to get attribute u_width');
-        return;
-    }
-    
-    u_height = gl.getUniformLocation(program, "u_height");
-    
-    if (u_height < 0) {
-            console.log('failed to get attribute u_height');
-        return;
-    }
-    
-    // Bind stuff for images
-    u_sampler = gl.getUniformLocation(program, "u_sampler");
-    
-    if (u_sampler < 0) {
-        console.log('failed to get uniform u_sampler');
-        return;
-    }
-}
+        if (u_time < 0) {
+            console.log('failed to get uniform time');
+            return;
+        }
 
-function setupAttributes(gl, program)
-{
-    console.log('setupAtributes');
-    
-    a_position = gl.getAttribLocation(program, "a_position");
+        u_modelMatrix = gl.getUniformLocation(program, "u_modelMatrix");
 
-    if (a_position < 0) {
-        console.log('failed to get attribute position');
-        return;
-    }
-        
-    a_pointSize = gl.getAttribLocation(program, "a_pointSize");
+        if (u_modelMatrix < 0) {
+                console.log('failed to get attribute u_modelMatrix');
+            return;
+        }
 
-    if (a_pointSize < 0) {
-        console.log('failed to get attribute a_pointSize');
-        return;
+        u_width = gl.getUniformLocation(program, "u_width");
+
+        if (u_width < 0) {
+                console.log('failed to get attribute u_width');
+            return;
+        }
+
+        u_height = gl.getUniformLocation(program, "u_height");
+
+        if (u_height < 0) {
+                console.log('failed to get attribute u_height');
+            return;
+        }
+
+        // Bind stuff for images
+        u_sampler = gl.getUniformLocation(program, "u_sampler");
+
+        if (u_sampler < 0) {
+            console.log('failed to get uniform u_sampler');
+            return;
+        }
     }
-    
-    a_color = gl.getAttribLocation(program, "a_color");
-    
-    if (a_color < 0) {
-        console.log('failed to get attribute a_color');
-        return;    
-    }
-    
-    a_texCoord = gl.getAttribLocation(program, "a_texCoord");
-    
-    if (a_texCoord < 0) {
-        console.log('failed to get attribute a_texCoord');
-        return;
-    }      
+
+    function setupAttributes(gl, program)
+    {
+        console.log('setupAtributes');
+
+        a_position = gl.getAttribLocation(program, "a_position");
+
+        if (a_position < 0) {
+            console.log('failed to get attribute position');
+            return;
+        }
+
+        a_pointSize = gl.getAttribLocation(program, "a_pointSize");
+
+        if (a_pointSize < 0) {
+            console.log('failed to get attribute a_pointSize');
+            return;
+        }
+
+        a_color = gl.getAttribLocation(program, "a_color");
+
+        if (a_color < 0) {
+            console.log('failed to get attribute a_color');
+            return;    
+        }
+
+        a_texCoord = gl.getAttribLocation(program, "a_texCoord");
+
+        if (a_texCoord < 0) {
+            console.log('failed to get attribute a_texCoord');
+            return;
+        }      
+    }    
 }
 
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGLShader
@@ -596,7 +609,10 @@ function delayedCompile() {
         {        
             if(image)
             {
-                shaderSetup(gl);                     
+                shaderSetup(gl);
+                
+                testAnimationKernel();
+                
                 break;
             }
             else
@@ -613,6 +629,10 @@ function main() {
     console.log('main');
            
     displayAsset.shader.imageArray.push('hello');
+    
+    console.log(Object.keys(displayAsset.shader.uniforms)[0]);
+    
+    console.log(Object.keys(displayAsset.shader.uniforms).length);
     
     displayAsset.render.drawStuff();
     
@@ -651,7 +671,10 @@ function main() {
    
     // Load shaders from files
     loadShaderFile(gl, 'shaders/ch5_fshader.frag', gl.FRAGMENT_SHADER);
-    loadShaderFile(gl, 'shaders/ch5_vshader.vert', gl.VERTEX_SHADER);        
+    loadShaderFile(gl, 'shaders/ch5_vshader.vert', gl.VERTEX_SHADER);
     
+    //test to load javascript
+    loadShaderFile(gl, 'displayAssets/testAsset/kernels/animation.js', 99);
+              
     loadImageResources(gl, 'images/snow2.jpg');    
 }
