@@ -8,6 +8,7 @@
 
 //https://stackoverflow.com/questions/45131804/how-to-set-a-time-uniform-in-webgl
 
+var assetRoot = "displayAssets/";
 
 var u_time = null;
 var u_width = null;
@@ -25,7 +26,7 @@ var a_texCoord = null;
 
 var displayAsset =
 {
-    'assetName':'testAsset',
+    'assetNamespace':'testAsset',
     
     'sharedCanvas':{
         'u_width':800,
@@ -33,19 +34,12 @@ var displayAsset =
     },
     
     'shader':{
-        'vertexSource':'shaders/ch5_vshader.vert',
-        'fragmentSource':'shaders/ch5_fshader.frag',
+        'vertexSource':'shaders/source.vert',
+        'fragmentSource':'shaders/source.frag',
       
-        'vertexArray': new Float32Array([
-        0.25, 0.0, 0.0,  0.0, 1.0,   1.0, 1.0, 1.0, 1.0,     10.0,
-        0.6, 0.0, 0.0,  0.0, 0.0,   1.0, 1.0, 1.0, 1.0,     10.0,                
-        0.2, 0.4, 0.0,  1.0, 1.0,   1.0, 1.0, 1.0, 1.0,     10.0,        
-        0.6, 0.4, 0.0,  1.0, 0.0,   1.0, 1.0, 1.0, 1.0,     10.0  
-        ]),
-        
-        'imageArray':[
-            'images/snow.jpg'
-        ],
+        'verticesArray':'shaders/vertices.json',
+                
+        'imagesArray':'shaders/images.json',
         'textureArray':null,
         
         'uniforms':{
@@ -111,6 +105,7 @@ var gl = null;
 // Shader Variables
 var VSHADER_SOURCE = null;
 var FSHADER_SOURCE = null;
+var SCRIPT_LOAD = 0;
 
 var fShaderLoaded = false;
 var vShaderLoaded = false;
@@ -137,23 +132,21 @@ var display_once = false;
 
 function loadShaderFile(g1, filename, shader) {
     console.log('loadShaderFile');
-
+   
     var request = new XMLHttpRequest();
 
     request.onreadystatechange =
             function () {
                 if (request.readyState === 4 && request.status !== 404) {
-                    onLoadShader(g1, request.responseText, shader);
+                    onLoadShader(g1, filename, request.responseText, shader);
                 }
             };
-
-    console.log(filename);
-    
+        
     request.open('GET', filename, true);
     request.send();
 }
 
-function onLoadShader(g1, fileString, type)
+function onLoadShader(g1, filename, fileString, type)
 {
     console.log('onLoadShader');
     if (type === g1.VERTEX_SHADER)
@@ -170,11 +163,12 @@ function onLoadShader(g1, fileString, type)
         // works but maybe not best appproach
         // https://stackoverflow.com/questions/950087/how-do-i-include-a-javascript-file-in-another-javascript-file
         var script = document.createElement("script");
-        
-        //console.log(fileString);
-        script.src = '../displayAssets/testAsset/kernels/animation.js';
+                   
+        script.src = filename;
         
         document.head.appendChild(script);
+        
+        SCRIPT_LOAD += 1;
     }
 }
 
@@ -605,13 +599,22 @@ function delayedCompile() {
        
     for(i = 0; i < 100; ++i)
     {
-        if(VSHADER_SOURCE && FSHADER_SOURCE)
+        console.log(SCRIPT_LOAD);
+        
+        if(VSHADER_SOURCE && FSHADER_SOURCE && SCRIPT_LOAD > 1)
         {        
             if(image)
             {
                 shaderSetup(gl);
                 
-                testAnimationKernel();
+                // test code
+                var assetNamespace = eval(displayAsset.assetNamespace);
+                
+                assetNamespace.animation.kernel();
+                
+                assetNamespace.render.kernel();
+                
+                // end test code
                 
                 break;
             }
@@ -628,15 +631,25 @@ setTimeout(delayedCompile, 5000);
 function main() {
     console.log('main');
            
-    displayAsset.shader.imageArray.push('hello');
+    // test code
     
-    console.log(Object.keys(displayAsset.shader.uniforms)[0]);
+    var testArrayFloat32;
     
-    console.log(Object.keys(displayAsset.shader.uniforms).length);
+    $.getJSON(assetRoot + displayAsset.assetNamespace + '/shaders/vertices.json', function(data)
+    {
+        var items = [];
+        $.each( data, function(key, val) {
+            console.log(key + ' : ' + val);
+            
+            testArrayFloat32 = new Float32Array(val);
+        });    
+    });
     
-    displayAsset.render.drawStuff();
+    //console.log(Object.keys(displayAsset.shader.uniforms)[0]);
     
-    console.log(displayAsset);        
+    //console.log(Object.keys(displayAsset.shader.uniforms).length);       
+    
+    // end test code
     
     var canvas = document.getElementById('webgl');
 
@@ -673,8 +686,12 @@ function main() {
     loadShaderFile(gl, 'shaders/ch5_fshader.frag', gl.FRAGMENT_SHADER);
     loadShaderFile(gl, 'shaders/ch5_vshader.vert', gl.VERTEX_SHADER);
     
-    //test to load javascript
-    loadShaderFile(gl, 'displayAssets/testAsset/kernels/animation.js', 99);
-              
-    loadImageResources(gl, 'images/snow2.jpg');    
+    //test to load javascript      
+    
+    // look into using jquery instead?
+    loadShaderFile(gl, 'displayAssets/testAsset/kernels/animation.js', 99);    
+    loadShaderFile(gl, 'displayAssets/testAsset/kernels/render.js', 99);          
+    loadImageResources(gl, 'images/snow2.jpg');  
+    
+    console.log(displayAsset);
 }
