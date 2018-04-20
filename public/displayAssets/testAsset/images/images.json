@@ -1,0 +1,11 @@
+{   
+    "image_0001":{
+        "file": "images/sky.jpg"
+    },
+    "image_0002":{
+        "file": "images/snow.jpg"
+    },
+    "image_0003":{
+        "file": "images/snow2.jpg"
+    }
+}

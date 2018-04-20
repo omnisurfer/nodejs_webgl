@@ -26,36 +26,17 @@ var a_texCoord = null;
 
 var displayAsset =
 {
-    'assetNamespace':'testAsset',
+    'namespace':'testAsset',
     
-    'sharedCanvas':{
-        'u_width':800,
-        'u_height':800
-    },
+    //if blank, just use sharedCanvas??
+    'sharedCanvas':'../sharedCanvas.json',
     
-    'shader':{
-        'vertexSource':'shaders/source.vert',
-        'fragmentSource':'shaders/source.frag',
-      
-        'verticesArray':'shaders/vertices.json',
-                
-        'imagesArray':'shaders/images.json',
-        'textureArray':null,
-        
-        'uniforms':{
-            'u_time':null,                
-            'u_modelMatrix':null,
-            'u_sampler':null
-        },
+    'vertices':'shaders/vertices.json',
     
-        'attributes':{
-            'a_position':null,
-            'a_color':null,
-            'a_pointSize':null,
-            'a_texCoord':null
-        }
-    },     
+    'shaders':'shaders/shaders.json',             
     
+    'images':'images/images.json',
+            
     'animatation':
     {
         'kernelSource':'kernels/animation.js',
@@ -66,33 +47,7 @@ var displayAsset =
     'render':{
         'kernelSource':'kernels/render.js',
         drawStuff() {
-            console.log('render.drawStuff');
-            /*
-            var _modelMatrix = new Matrix4();
-
-            _modelMatrix.setRotate(currentAngle, 0, 0, 1);                
-
-            _modelMatrix.scale(2.0, 2.0, 2.0);
-
-            _modelMatrix.translate(0, 0, 0);                      
-
-            gl.uniformMatrix4fv(this.shader.uniforms.u_modelMatrix, false, _modelMatrix.elements);
-
-            // gl.clearColor(0.0, 0.0, 0.0, 1.0);
-
-            // gl.clear(gl.COLOR_BUFFER_BIT);
-
-            if(mode === 1)
-            {
-                //console.log("mode 1");
-                gl.drawArrays(gl.TRIANGLE_STRIP, 0, numOfVertices);                 
-            }
-            else
-            {
-                //console.log("mode 2");
-                gl.drawArrays(gl.TRIANGLES, 0, numOfVertices);                 
-            }
-            */
+            console.log('render.drawStuff stub function');
         }
     }
 };
@@ -608,7 +563,7 @@ function delayedCompile() {
                 shaderSetup(gl);
                 
                 // test code
-                var assetNamespace = eval(displayAsset.assetNamespace);
+                var assetNamespace = eval(displayAsset.namespace);
                 
                 assetNamespace.animation.kernel();
                 
@@ -635,15 +590,26 @@ function main() {
     
     var testArrayFloat32;
     
-    $.getJSON(assetRoot + displayAsset.assetNamespace + '/shaders/vertices.json', function(data)
+    var myData = null;
+    
+    $.getJSON(assetRoot + displayAsset.namespace + '/shaders/vertices.json', function(data)
     {
+        console.log(data);
+        
+        myData = data;
+             
         var items = [];
         $.each( data, function(key, val) {
-            console.log(key + ' : ' + val);
+            console.log(key + ' : ' + val);                        
             
             testArrayFloat32 = new Float32Array(val);
         });    
     });
+    
+    //https://stackoverflow.com/questions/9463233/how-to-access-nested-json-data
+    //https://stackoverflow.com/questions/17941127/get-value-of-key-from-a-nested-json
+    
+    //$.parseJSON(myData);
     
     //console.log(Object.keys(displayAsset.shader.uniforms)[0]);
     
