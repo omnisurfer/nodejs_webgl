@@ -595,25 +595,50 @@ function main() {
     $.getJSON(assetRoot + displayAsset.namespace + '/shaders/vertices.json', function(data)
     {
         console.log(data);
-        
-        myData = data;
-             
-        var items = [];
+
         $.each( data, function(key, val) {
-            console.log(key + ' : ' + val);                        
+            console.log(key);
+            
+            $.each(val, function(key, val) {
+                console.log('\t' + key + ' : ' + val);
+            });
+            
+            testArrayFloat32 = new Float32Array(val);
+        });    
+    });
+    
+    $.getJSON(assetRoot + displayAsset.namespace + '/shaders/shaders.json', function(data)
+    {
+        console.log(data);
+        
+        $.each( data, function(key, val) {
+            console.log(key);
+            
+            $.each(val, function(key, val) {
+                console.log('\t' + key + ' : ' + val);
+            });
+            
+            testArrayFloat32 = new Float32Array(val);
+        });    
+    });
+    
+    $.getJSON(assetRoot + displayAsset.namespace + '/images/images.json', function(data)
+    {
+        console.log(data);
+        
+        $.each( data, function(key, val) {
+            console.log(key);
+            
+            $.each(val, function(key, val) {
+                console.log('\t' + key + ' : ' + val);
+            });
             
             testArrayFloat32 = new Float32Array(val);
         });    
     });
     
     //https://stackoverflow.com/questions/9463233/how-to-access-nested-json-data
-    //https://stackoverflow.com/questions/17941127/get-value-of-key-from-a-nested-json
-    
-    //$.parseJSON(myData);
-    
-    //console.log(Object.keys(displayAsset.shader.uniforms)[0]);
-    
-    //console.log(Object.keys(displayAsset.shader.uniforms).length);       
+    //https://stackoverflow.com/questions/17941127/get-value-of-key-from-a-nested-json     
     
     // end test code
     
@@ -655,6 +680,7 @@ function main() {
     //test to load javascript      
     
     // look into using jquery instead?
+    // https://api.jquery.com/jquery.getscript/
     loadShaderFile(gl, 'displayAssets/testAsset/kernels/animation.js', 99);    
     loadShaderFile(gl, 'displayAssets/testAsset/kernels/render.js', 99);          
     loadImageResources(gl, 'images/snow2.jpg');  
