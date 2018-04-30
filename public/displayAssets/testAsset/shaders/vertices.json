@@ -1,5 +1,7 @@
 {
     "face_0001":{
+        "animation":["animation_0001"],
+        "render":["render_0001"],
         "type":"gl.TRIANGLE_STRIP",
         "shaders":["shader_0001"],
         "images":["image_0001"],
@@ -11,6 +13,8 @@
     },
     
     "face_0002":{
+        "animation":["animation_0001"],
+        "render":["render_0001"],
         "type":"gl.TRIANGLE_STRIP",
         "shaders":["shader_0001"],
         "images":["image_0002"],
@@ -22,6 +26,8 @@
     },
     
     "face_9999":{
+        "animation":["animation_0001"],
+        "render":["render_0001"],
         "type":"gl.TRIANGLE_STRIP",
         "shaders":["shader_0001"],
         "images":["image_0003"],

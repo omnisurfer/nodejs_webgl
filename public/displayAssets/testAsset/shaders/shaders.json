@@ -1,7 +1,7 @@
 {
     "shader_0001":{
-        "vertexKernel": "shaders/shader_0001.vert",
-        "fragmentKernel": "shaders/shader_0001.frag",
+        "vertexKernel": "shader_0001.vert",
+        "fragmentKernel": "shader_0001.frag",
         "uniforms": ["u_time","u_modelMatrix","u_sampler"],
         "attributes":["a_position","a_color","a_pointSize","a_texCoord"],
         "varyings":["null"]

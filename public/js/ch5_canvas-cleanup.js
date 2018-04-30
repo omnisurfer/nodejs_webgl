@@ -8,7 +8,10 @@
 
 //https://stackoverflow.com/questions/45131804/how-to-set-a-time-uniform-in-webgl
 
-var assetRoot = "displayAssets/";
+var assetRoot = "displayAssets";    
+var masterManifest = "masterManifest.json";
+
+let assetLoader = new AssetLoader("loader", assetRoot, masterManifest);
 
 var u_time = null;
 var u_width = null;
@@ -569,6 +572,8 @@ function delayedCompile() {
                 
                 assetNamespace.render.kernel();
                 
+                //assetLoader.queryDisplayAssets();
+                
                 // end test code
                 
                 break;
@@ -586,14 +591,20 @@ setTimeout(delayedCompile, 5000);
 function main() {
     console.log('main');
            
-    // test code
+    // <editor-fold defaultstate="collasped" desc="Test Code"> 
+    
+    // look into web workers for loading files within a seperate state machine
+    // https://medium.com/techtrument/multithreading-javascript-46156179cf9a
+        
+    assetLoader.queryDisplayAssets(queryDisplayAssetsCallback);
     
     var testArrayFloat32;
     
     var myData = null;
     
-    $.getJSON(assetRoot + displayAsset.namespace + '/shaders/vertices.json', function(data)
-    {
+    /*
+    $.getJSON(assetRoot + '\\' + displayAsset.namespace + '/shaders/vertices.json', function(data)
+    {        
         console.log(data);
 
         $.each( data, function(key, val) {
@@ -607,7 +618,7 @@ function main() {
         });    
     });
     
-    $.getJSON(assetRoot + displayAsset.namespace + '/shaders/shaders.json', function(data)
+    $.getJSON(assetRoot + '\\' + displayAsset.namespace + '/shaders/shaders.json', function(data)
     {
         console.log(data);
         
@@ -622,7 +633,7 @@ function main() {
         });    
     });
     
-    $.getJSON(assetRoot + displayAsset.namespace + '/images/images.json', function(data)
+    $.getJSON(assetRoot + '\\' + displayAsset.namespace + '/images/images.json', function(data)
     {
         console.log(data);
         
@@ -636,11 +647,11 @@ function main() {
             testArrayFloat32 = new Float32Array(val);
         });    
     });
-    
+    */
     //https://stackoverflow.com/questions/9463233/how-to-access-nested-json-data
     //https://stackoverflow.com/questions/17941127/get-value-of-key-from-a-nested-json     
     
-    // end test code
+    // </editor-fold>
     
     var canvas = document.getElementById('webgl');
 
@@ -685,5 +696,29 @@ function main() {
     loadShaderFile(gl, 'displayAssets/testAsset/kernels/render.js', 99);          
     loadImageResources(gl, 'images/snow2.jpg');  
     
-    console.log(displayAsset);
+    console.log('displayAsset: ' + displayAsset);
+    
+    i = 0;
+    
+    while(i < 1000)
+    {
+        if(i%10 === 0)
+        {
+            console.log(i);
+        }
+        ++i;
+    }
+}
+
+function queryDisplayAssetsCallback(assetList) {
+    
+    console.log("\tqueryDisplayAssetsCallback");
+
+    $.each( assetList, function(key, val) {
+    console.log(key);
+
+        $.each(val, function(key, val) {
+            console.log('\t' + key + ' : ' + val);
+        });                        
+    });
 }

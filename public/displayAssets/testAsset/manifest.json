@@ -1,0 +1,16 @@
+{
+    "namespace": "testAsset",
+    
+    "canvas":"",
+    
+    "shaders": {
+        "vertices":"vertices.json",
+        "shaders":"shaders.json"
+    },
+    
+    "images":"images.json",
+            
+    "animatationKernels":"animation.json",
+
+    "renderKernels":"render.json"   
+}
