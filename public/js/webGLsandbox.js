@@ -86,6 +86,8 @@ var g_points = [];
 
 var display_once = false;
 
+var worker;
+
 // <editor-fold defaultstate="collasped" desc="Load Resources">
 
 function loadShaderFile(g1, filename, shader) {
@@ -590,6 +592,8 @@ setTimeout(delayedCompile, 5000);
 
 function main() {
     console.log('main');
+    
+    //startWorker();
            
     // <editor-fold defaultstate="collasped" desc="Test Code"> 
     
@@ -696,18 +700,7 @@ function main() {
     loadShaderFile(gl, 'displayAssets/testAsset/kernels/render.js', 99);          
     loadImageResources(gl, 'images/snow2.jpg');  
     
-    console.log('displayAsset: ' + displayAsset);
-    
-    i = 0;
-    
-    while(i < 1000)
-    {
-        if(i%10 === 0)
-        {
-            console.log(i);
-        }
-        ++i;
-    }
+    console.log('displayAsset: ' + displayAsset);                  
 }
 
 function queryDisplayAssetsCallback(assetList) {
@@ -721,4 +714,27 @@ function queryDisplayAssetsCallback(assetList) {
             console.log('\t' + key + ' : ' + val);
         });                        
     });
+}
+
+function startWorker() {
+    if(typeof(Worker) !== "undefined") {
+        if(typeof(worker) === "undefined") {
+            worker = new Worker("js/assetLoaderCoordinator.js");            
+        }
+        worker.onmessage = function(e) {
+            var data = e.data;
+            console.log("message from worker: " + data);
+            worker.postMessage("keep working...");
+        };
+    } else {
+        console.log("browser does not support Web Workers");
+    }
+}
+
+function stopWorker() {
+    if(worker !== undefined)
+    {
+        worker.terminate();
+        worker = undefined;
+    }
 }
