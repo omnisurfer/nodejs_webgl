@@ -597,6 +597,7 @@ function main() {
            
     // <editor-fold defaultstate="collasped" desc="Test Code"> 
     
+    console.log(AssetLoaderCoordinatorState.INIT);
     // look into web workers for loading files within a seperate state machine
     // https://medium.com/techtrument/multithreading-javascript-46156179cf9a
         
@@ -719,12 +720,12 @@ function queryDisplayAssetsCallback(assetList) {
 function startWorker() {
     if(typeof(Worker) !== "undefined") {
         if(typeof(worker) === "undefined") {
-            worker = new Worker("js/assetLoaderCoordinator.js");            
+            worker = new Worker("js/assetLoaderCoordinator.js"); 
+            worker.postMessage("INIT");
         }
         worker.onmessage = function(e) {
             var data = e.data;
-            console.log("message from worker: " + data);
-            worker.postMessage("keep working...");
+            console.log("from worker: " + data);            
         };
     } else {
         console.log("browser does not support Web Workers");
