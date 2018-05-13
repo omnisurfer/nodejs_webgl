@@ -86,7 +86,7 @@ var g_points = [];
 
 var display_once = false;
 
-var worker;
+var worker_assetLoaderCoordinator;
 
 // <editor-fold defaultstate="collasped" desc="Load Resources">
 
@@ -717,25 +717,58 @@ function queryDisplayAssetsCallback(assetList) {
     });
 }
 
-function startWorker() {
+function worker_startAssetLoaderCoordinator() {
     if(typeof(Worker) !== "undefined") {
-        if(typeof(worker) === "undefined") {
-            worker = new Worker("js/assetLoaderCoordinator.js"); 
-            worker.postMessage("INIT");
+        if(typeof(worker_assetLoaderCoordinator) === "undefined") {
+            worker_assetLoaderCoordinator = new Worker("js/assetLoaderCoordinator.js"); 
+            worker_assetLoaderCoordinator.postMessage("INIT");
         }
-        worker.onmessage = function(e) {
-            var data = e.data;
-            console.log("from worker: " + data);            
+
+        worker_assetLoaderCoordinator.onmessage = function(e) {
+            worker_processMesssageAssetLoaderCoordinator(e);
         };
     } else {
         console.log("browser does not support Web Workers");
     }
 }
 
-function stopWorker() {
-    if(worker !== undefined)
+function worker_processMesssageAssetLoaderCoordinator(e) {
+    var messageJSON = e.data;
+    var message;
+    var state;
+
+    $.each(messageJSON, function(key, val) {                
+        message = key;
+        state = val;
+    });
+
+    // process the worker threads responses
+    switch(message)
     {
-        worker.terminate();
-        worker = undefined;
+        case "error":                    
+            worker_stopAssetLoaderCoordinator();
+            break;
+
+        case "ok":
+            break;
+
+        default:
+            break;
+    }
+    console.log("worker response: " + message + " " + state);            
+}
+
+function worker_stopAssetLoaderCoordinator() {
+    if(worker_assetLoaderCoordinator !== undefined)
+    {
+        worker_assetLoaderCoordinator.terminate();
+        worker_assetLoaderCoordinator = undefined;
+    }
+}
+
+function worker_advanceStateMachineAssetLoaderCoordinator() {
+    if(worker_assetLoaderCoordinator !== undefined)
+    {
+        worker_assetLoaderCoordinator.postMessage("ADVANCE");
     }
 }

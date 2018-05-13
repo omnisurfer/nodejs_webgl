@@ -34,29 +34,51 @@ var AssetLoadState = Object.freeze({
 });
 
 var assetLoaderCoordinatorState = AssetLoaderCoordinatorState.INIT;
+var assetLoaderCoordinatorPrevState = AssetLoaderCoordinatorState.INIT;
+
+var displayStateOnce = true;
+var displayStateLog = true;
+
+// this variable likely subject to race conditions.
 var advanceAssetLoaderCoordinatorState = false;
 
 function assetLoaderCoordinatorStateMachine() {
-    ++i;    
-    console.log("worker running: " + i);
+    ++i;        
     switch(assetLoaderCoordinatorState)
     {
         case AssetLoaderCoordinatorState.INIT:
-            console.log("INIT");
+            stateMachineStateLog(AssetLoaderCoordinatorState.INIT);
             
-            if(advanceAssetLoaderCoordinatorState === true) {
-                assetLoaderCoordinatorState = AssetLoaderCoordinatorState.LOAD_MASTER_MANIFEST;
-                postMessage(AssetLoaderCoordinatorState.LOAD_MASTER_MANIFEST);
-            }
+            stateMachineAdvanceWait(AssetLoaderCoordinatorState.LOAD_MASTER_MANIFEST);            
             break;
             
-        case AssetLoaderCoordinatorState.LOAD_MASTER_MANIFEST:
-            console.log("LMM");
+        case AssetLoaderCoordinatorState.LOAD_MASTER_MANIFEST:            
+            stateMachineStateLog(AssetLoaderCoordinatorState.LOAD_MASTER_MANIFEST);
+            
+            stateMachineAdvanceWait(AssetLoaderCoordinatorState.PARSE_MASTER_MANIFEST);
             break;
             
+        case AssetLoaderCoordinatorState.PARSE_MASTER_MANIFEST:
+            stateMachineStateLog(AssetLoaderCoordinatorState.PARSE_MASTER_MANIFEST);
+            
+            stateMachineAdvanceWait(AssetLoaderCoordinatorState.LOAD_ASSETS);
+            break;
+            
+        case AssetLoaderCoordinatorState.LOAD_ASSETS:
+            stateMachineStateLog(AssetLoaderCoordinatorState.LOAD_ASSETS);
+            
+            stateMachineAdvanceWait(AssetLoaderCoordinatorState.INIT);
+            break;
+                   
+        case AssetLoaderCoordinatorState.ERROR:
         default:
-            console.log("INVALID STATE");
-            assetLoaderCoordinatorState = AssetLoaderCoordinatorState.ERROR;
+            stateMachineStateLog(AssetLoaderCoordinatorState.ERROR);
+            
+            var stateReport = {
+                "error":assetLoaderCoordinatorState
+            };
+            
+            postMessage(stateReport);
             break;
     }        
     
@@ -64,12 +86,38 @@ function assetLoaderCoordinatorStateMachine() {
 };
 assetLoaderCoordinatorStateMachine();
 
+function stateMachineAdvanceWait(nextState) {
+    // Check if receieved message to move onto next state
+    if(advanceAssetLoaderCoordinatorState === true) {
+        advanceAssetLoaderCoordinatorState = false;
+        
+        assetLoaderCoordinatorPrevState = assetLoaderCoordinatorState;
+        assetLoaderCoordinatorState = nextState;
+        
+        var stateReport = {
+            "ok":assetLoaderCoordinatorPrevState
+        };
+        postMessage(stateReport);
+        
+        displayStateOnce = true;
+    }    
+}
+
+function stateMachineStateLog(message)
+{
+    if(displayStateOnce === true && displayStateLog === true)
+    {
+        console.log(message);
+        displayStateOnce = false;
+    }
+}
+
 onmessage = function(e) {
     console.log("from main: " + e.data);
     
     if(e.data === "ADVANCE")
     {
-        console.log("RECEIVED ADVANCE MESSAGE");
+        console.log("advancing state machine");
         advanceAssetLoaderCoordinatorState = true;
     }
 };
