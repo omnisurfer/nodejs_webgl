@@ -5,7 +5,7 @@ if(testAsset === undefined) {
 testAsset.animation = {
 
     kernel: function() {
-            console.log('hello from animation kernel!?');    
+            console.log('hello from testAsset animation kernel!');    
     },
     
     animate_WIP: function(angle, g_last, ANGLE_STEP)

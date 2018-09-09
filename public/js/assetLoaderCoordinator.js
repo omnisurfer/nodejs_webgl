@@ -43,6 +43,9 @@ var displayStateLog = true;
 var advanceAssetLoaderCoordinatorState = false;
 
 function assetLoaderCoordinatorStateMachine() {
+    
+    console.log(arguments.callee.name);
+    
     ++i;        
     switch(assetLoaderCoordinatorState)
     {
@@ -87,6 +90,9 @@ function assetLoaderCoordinatorStateMachine() {
 assetLoaderCoordinatorStateMachine();
 
 function stateMachineAdvanceWait(nextState) {
+    
+    console.log(arguments.callee.name);
+    
     // Check if receieved message to move onto next state
     if(advanceAssetLoaderCoordinatorState === true) {
         advanceAssetLoaderCoordinatorState = false;
@@ -103,8 +109,10 @@ function stateMachineAdvanceWait(nextState) {
     }    
 }
 
-function stateMachineStateLog(message)
-{
+function stateMachineStateLog(message) {
+    
+    console.log(arguments.callee.name);
+    
     if(displayStateOnce === true && displayStateLog === true)
     {
         console.log(message);
@@ -113,6 +121,8 @@ function stateMachineStateLog(message)
 }
 
 onmessage = function(e) {
+    
+    console.log(arguments.callee.name);
     console.log("from main: " + e.data);
     
     if(e.data === "ADVANCE")

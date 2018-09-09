@@ -12,7 +12,7 @@ class AssetLoader {
     };
     
     queryDisplayAssets(callback) {
-        console.log('queryDisplayAssets_1733');
+                
         $.getJSON(assetRoot + '\\' + masterManifest, function(assetList)
         {
            console.log('queryData: ' + assetList);

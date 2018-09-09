@@ -5,7 +5,7 @@ if(testAsset === undefined) {
 testAsset.render = {
 
     kernel: function() {
-            console.log('hello from render kernel!?');    
+            console.log('hello from testAsset render kernel!');    
     },
     
    drawTriangles_WIP: function(gl, numOfVertices, currentAngle, u_modelMatrix, mode)
@@ -14,7 +14,7 @@ testAsset.render = {
 
             _modelMatrix.setRotate(currentAngle, 0, 0, 1);                
 
-            _modelMatrix.scale(2.0, 2.0, 2.0);
+            _modelMatrix.scale(1.0, 1.0, 1.0);
 
             _modelMatrix.translate(0, 0, 0);                      
 

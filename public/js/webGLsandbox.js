@@ -88,10 +88,11 @@ var display_once = false;
 
 var worker_assetLoaderCoordinator;
 
-// <editor-fold defaultstate="collasped" desc="Load Resources">
+//TODO: Create a single loader function that handles the different resources.
+// <editor-fold defaultstate="collasped" desc="Load Remote Resources">
 
 function loadShaderFile(g1, filename, shader) {
-    console.log('loadShaderFile');
+    console.log(arguments.callee.name);
    
     var request = new XMLHttpRequest();
 
@@ -106,9 +107,10 @@ function loadShaderFile(g1, filename, shader) {
     request.send();
 }
 
-function onLoadShader(g1, filename, fileString, type)
+function onLoadShader(g1, fileString, type)
 {
-    console.log('onLoadShader');
+    console.log(arguments.callee.name);
+    
     if (type === g1.VERTEX_SHADER)
     {
         VSHADER_SOURCE = fileString;
@@ -119,47 +121,62 @@ function onLoadShader(g1, filename, fileString, type)
         console.log('FSHADER_LOADED');
     }
     else
-    {
-        // works but maybe not best appproach
-        // https://stackoverflow.com/questions/950087/how-do-i-include-a-javascript-file-in-another-javascript-file
-        var script = document.createElement("script");
-                   
-        script.src = filename;
-        
-        document.head.appendChild(script);
-        
-        SCRIPT_LOAD += 1;
-    }
+        console.log('Invaid Shader');
 }
 
-function loadImageResources(gl, filename)
-{
-    console.log("loadImageResources");
+function onLoadScript(filename) {
     
-    var request = new XMLHttpRequest();
+    console.log(arguments.callee.name);
     
-    request.onreadystatechange =
-            function () {
-                if (request.readyState === 4 && request.status !== 404) {
-                    onLoadImage(gl, filename);
-                }
-    };
-    
-    request.open('GET', filename, true);
-    request.send();
+    // https://stackoverflow.com/questions/950087/how-do-i-include-a-javascript-file-in-another-javascript-file
+    var script = document.createElement("script");
+
+    script.src = filename;
+
+    document.head.appendChild(script);
+
+    SCRIPT_LOAD += 1;    
 }
 
-function onLoadImage(g1, filename)
+function onLoadImage(filename)
 {
-    console.log("onLoadImage");
+    console.log(arguments.callee.name);
     
     image.src = filename;
     
     console.log("image.src: " + image.src);    
 }
 
+function loadRemoteResource(g1, filename, resourceType, resource) {
+    console.log(arguments.callee.name);
+    
+    var request = new XMLHttpRequest();
+    
+    request.onreadystatechange =
+        function () {
+            if (request.readyState === 4 && request.status !== 404) {
+                if(resourceType === 'shader')
+                    onLoadShader(g1, request.responseText, resource);
+                else if(resourceType === 'script')
+                    onLoadScript(filename);
+                else if(resourceType === 'image')
+                    onLoadImage(filename);
+                else
+                    console.log('Undefined resources');
+            }
+        };    
+        
+    request.open('GET', filename, true);
+    request.send();
+}
+
+// </editor-fold>
+
+// <editor-fold defaultstate="collasped" desc="Shader Composition">
 function loadTexture(gl, texture, u_sampler, image)
-{      
+{
+    console.log(arguments.callee.name);
+    
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
     
     gl.activeTexture(gl.TEXTURE0);
@@ -173,19 +190,16 @@ function loadTexture(gl, texture, u_sampler, image)
     gl.uniform1i(u_sampler, 0);        
 }
 
-// </editor-fold>
-
-// <editor-fold defaultstate="collasped" desc="Shader Composition">
 function shaderSetup(gl)
 {
-    console.log('shaderSetup - edit@1040');
+    console.log(arguments.callee.name);
 
     var vshader = shaderCompile(gl, VSHADER_SOURCE, gl.VERTEX_SHADER);
     var fshader = shaderCompile(gl, FSHADER_SOURCE, gl.FRAGMENT_SHADER);
 
     // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/createProgram
 
-    var program = gl.createProgram();
+    var program = gl.createProgram();        
     
     gl.attachShader(program, vshader);
     gl.attachShader(program, fshader);
@@ -287,8 +301,8 @@ function shaderSetup(gl)
 
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGLShader
 function shaderCompile(gl, sourceCode, type) {
-
-    console.log('shaderCompile');
+    
+    console.log(arguments.callee.name);
 
     var shader = gl.createShader(type);
     gl.shaderSource(shader, sourceCode);
@@ -302,11 +316,11 @@ function shaderCompile(gl, sourceCode, type) {
 }
 // </editor-fold>
 
-// <editor-fold defaultstate="collasped" desc="Init Vertex Buffers">
+// <editor-fold defaultstate="collasped" desc="Animate and Render">
 
 function initVertexBuffers() {
     
-    // console.log('initVertexBuffers');
+    // console.log(arguments.callee.name);
 
     // Vertices, Interleaved
     // x, y, z,     s, t,   r, g, b, a,     p
@@ -362,7 +376,7 @@ function initVertexBuffers() {
 
 function initTextureVertexBuffers() {
             
-    // console.log("initTextureVertexBuffers WIP");
+    // console.log(arguments.callee.name);
     
     // Vertices, Interleaved
     // x, y, z,     s, t,   r, g, b, a,     p
@@ -415,12 +429,10 @@ function initTextureVertexBuffers() {
     return n;
 }
 
-// </editor-fold>
-
-// <editor-fold defaultstate="collasped" desc="Animate and Render">
-
 function animate(angle)
 {
+    // console.log(arguments.callee.name);
+    
     var now = Date.now();
     var elapsed = now - g_last; //ms
     g_last = now;
@@ -433,7 +445,9 @@ function animate(angle)
 }
 
 function drawTriangles(gl, numOfVertices, currentAngle, u_modelMatrix, mode)
-{                
+{
+        //console.log(arguments.callee.name);
+        
         var _modelMatrix = new Matrix4();
                                 
         _modelMatrix.setRotate(currentAngle, 0, 0, 1);                
@@ -462,6 +476,7 @@ function drawTriangles(gl, numOfVertices, currentAngle, u_modelMatrix, mode)
 
 function clear(gl)
 {
+    // console.log(arguments.callee.name);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
         
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -470,6 +485,8 @@ function clear(gl)
 // https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame
 function renderLoop(timestamp) {
 
+    //console.log(arguments.callee.name);
+    
     if (renderLoopUpdateCounter > renderLoopUpdateDebugLimit)
     {
         // console.log('enter: renderLoop');        
@@ -480,7 +497,8 @@ function renderLoop(timestamp) {
         
         if(!display_once)
         {
-            console.log('renderLoop (displays once)');
+            console.log(arguments.callee.name + '(displays once)');
+            //console.log('renderLoop (displays once)');
             
             gl.uniform1f(u_width, 800.0);
         
@@ -535,7 +553,7 @@ function renderLoop(timestamp) {
 
 function clickEvent(ev, gl, canvas, a_position) {
 
-    console.log('clickEvent');
+    console.log(arguments.callee.name);
 
     var x = ev.clientX;
     var y = ev.clientY;
@@ -555,7 +573,8 @@ function clickEvent(ev, gl, canvas, a_position) {
 }
 
 function delayedCompile() {            
-    console.log("Compiling...");
+    
+    console.log(arguments.callee.name);
        
     for(i = 0; i < 100; ++i)
     {
@@ -586,12 +605,13 @@ function delayedCompile() {
     }          
 }
 
+console.log("Calling delayedCompile...");
 setTimeout(delayedCompile, 5000);
 
 // </editor-fold>
 
 function main() {
-    console.log('main');
+    console.log(arguments.callee.name);
     
     //startWorker();
            
@@ -674,39 +694,30 @@ function main() {
     //init model matrix
     modelMatrix = new Matrix4();
     
-    image = new Image();
-        
-    console.log("image: ");
-    console.log(image);            
+    image = new Image();                 
         
     texture = gl.createTexture();
-    
-    console.log("texture: ");
-    console.log(texture);
     
     if (!texture) {
         console.log("failed to create texture");
         return false;
     }                
    
-    // Load shaders from files
-    loadShaderFile(gl, 'shaders/ch5_fshader.frag', gl.FRAGMENT_SHADER);
-    loadShaderFile(gl, 'shaders/ch5_vshader.vert', gl.VERTEX_SHADER);
-    
-    //test to load javascript      
-    
     // look into using jquery instead?
     // https://api.jquery.com/jquery.getscript/
-    loadShaderFile(gl, 'displayAssets/testAsset/kernels/animation.js', 99);    
-    loadShaderFile(gl, 'displayAssets/testAsset/kernels/render.js', 99);          
-    loadImageResources(gl, 'images/snow2.jpg');  
+    loadRemoteResource(gl,'shaders/ch5_fshader.frag', 'shader', gl.FRAGMENT_SHADER);
+    loadRemoteResource(gl,'shaders/ch5_vshader.vert', 'shader', gl.VERTEX_SHADER);
+        
+    loadRemoteResource(gl, 'displayAssets/testAsset/kernels/animation.js', 'script', 'none');    
+    loadRemoteResource(gl, 'displayAssets/testAsset/kernels/render.js', 'script', 'none');                              
     
-    console.log('displayAsset: ' + displayAsset);                  
+    loadRemoteResource(gl, 'images/snow2.jpg', 'image', 'none');
 }
 
+//<editor-fold desc="Asset Loader Code WIP">
 function queryDisplayAssetsCallback(assetList) {
     
-    console.log("\tqueryDisplayAssetsCallback");
+    console.log(arguments.callee.name);
 
     $.each( assetList, function(key, val) {
     console.log(key);
@@ -718,6 +729,9 @@ function queryDisplayAssetsCallback(assetList) {
 }
 
 function worker_startAssetLoaderCoordinator() {
+    
+    console.log(arguments.callee.name);
+    
     if(typeof(Worker) !== "undefined") {
         if(typeof(worker_assetLoaderCoordinator) === "undefined") {
             worker_assetLoaderCoordinator = new Worker("js/assetLoaderCoordinator.js"); 
@@ -733,6 +747,9 @@ function worker_startAssetLoaderCoordinator() {
 }
 
 function worker_processMesssageAssetLoaderCoordinator(e) {
+    
+    console.log(arguments.callee.name);
+    
     var messageJSON = e.data;
     var message;
     var state;
@@ -759,6 +776,9 @@ function worker_processMesssageAssetLoaderCoordinator(e) {
 }
 
 function worker_stopAssetLoaderCoordinator() {
+    
+    console.log(arguments.callee.name);
+    
     if(worker_assetLoaderCoordinator !== undefined)
     {
         worker_assetLoaderCoordinator.terminate();
@@ -767,8 +787,12 @@ function worker_stopAssetLoaderCoordinator() {
 }
 
 function worker_advanceStateMachineAssetLoaderCoordinator() {
+    
+    console.log(arguments.callee.name);
+    
     if(worker_assetLoaderCoordinator !== undefined)
     {
         worker_assetLoaderCoordinator.postMessage("ADVANCE");
     }
 }
+//</editor-fold>
