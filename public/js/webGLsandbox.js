@@ -58,7 +58,7 @@ var displayAsset =
 var image = null;
 var texture = null;
 
-var gl = null;
+var glContext = null;
 
 // Shader Variables
 var VSHADER_SOURCE = null;
@@ -88,35 +88,15 @@ var display_once = false;
 
 var worker_assetLoaderCoordinator;
 
-//TODO: Create a single loader function that handles the different resources.
 // <editor-fold defaultstate="collasped" desc="Load Remote Resources">
 
-function loadShaderFile(g1, filename, shader) {
-    console.log(arguments.callee.name);
-   
-    var request = new XMLHttpRequest();
-
-    request.onreadystatechange =
-            function () {
-                if (request.readyState === 4 && request.status !== 404) {
-                    onLoadShader(g1, filename, request.responseText, shader);
-                }
-            };
-        
-    request.open('GET', filename, true);
-    request.send();
-}
-
-function onLoadShader(g1, fileString, type)
-{
-    console.log(arguments.callee.name);
+function onLoadShader(glContext, fileString, type) {
+    console.log(arguments.callee.name + '()');
     
-    if (type === g1.VERTEX_SHADER)
-    {
+    if (type === glContext.VERTEX_SHADER) {
         VSHADER_SOURCE = fileString;
         console.log('VSHADER_LOADED');        
-    } else if (type === g1.FRAGMENT_SHADER)
-    {
+    } else if (type === glContext.FRAGMENT_SHADER) {
         FSHADER_SOURCE = fileString;
         console.log('FSHADER_LOADED');
     }
@@ -126,7 +106,7 @@ function onLoadShader(g1, fileString, type)
 
 function onLoadScript(filename) {
     
-    console.log(arguments.callee.name);
+    console.log(arguments.callee.name + '()');
     
     // https://stackoverflow.com/questions/950087/how-do-i-include-a-javascript-file-in-another-javascript-file
     var script = document.createElement("script");
@@ -138,17 +118,16 @@ function onLoadScript(filename) {
     SCRIPT_LOAD += 1;    
 }
 
-function onLoadImage(filename)
-{
-    console.log(arguments.callee.name);
+function onLoadImage(filename) {
+    console.log(arguments.callee.name + '()');
     
     image.src = filename;
     
     console.log("image.src: " + image.src);    
 }
 
-function loadRemoteResource(g1, filename, resourceType, resource) {
-    console.log(arguments.callee.name);
+function loadRemoteResource(glContext, filename, resourceType, resource) {
+    console.log(arguments.callee.name + '()');
     
     var request = new XMLHttpRequest();
     
@@ -156,7 +135,7 @@ function loadRemoteResource(g1, filename, resourceType, resource) {
         function () {
             if (request.readyState === 4 && request.status !== 404) {
                 if(resourceType === 'shader')
-                    onLoadShader(g1, request.responseText, resource);
+                    onLoadShader(glContext, request.responseText, resource);
                 else if(resourceType === 'script')
                     onLoadScript(filename);
                 else if(resourceType === 'image')
@@ -173,154 +152,156 @@ function loadRemoteResource(g1, filename, resourceType, resource) {
 // </editor-fold>
 
 // <editor-fold defaultstate="collasped" desc="Shader Composition">
-function loadTexture(gl, texture, u_sampler, image)
-{
-    console.log(arguments.callee.name);
-    
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
-    
-    gl.activeTexture(gl.TEXTURE0);
-    
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-            
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);    
-   
-    gl.uniform1i(u_sampler, 0);        
-}
-
-function shaderSetup(gl)
-{
-    console.log(arguments.callee.name);
-
-    var vshader = shaderCompile(gl, VSHADER_SOURCE, gl.VERTEX_SHADER);
-    var fshader = shaderCompile(gl, FSHADER_SOURCE, gl.FRAGMENT_SHADER);
-
-    // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/createProgram
-
-    var program = gl.createProgram();        
-    
-    gl.attachShader(program, vshader);
-    gl.attachShader(program, fshader);
-
-    gl.linkProgram(program);
-
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS))
-    {
-        var info = gl.getProgramInfoLog(program);
-        throw 'Could not compile WebGL program. \n\n' + info;
-    }
-   
-    // https://stackoverflow.com/questions/14413713/webgl-invalid-operation-uniform1i-location-not-for-current-program
-    gl.useProgram(program);
-    
-    setupUniforms(gl, program);
-    
-    setupAttributes(gl, program);
- 
-    //init the time reference for first frame just befor calling animation loop
-    g_last = Date.now();                
-    
-    window.requestAnimationFrame(renderLoop);
-    
-    function setupUniforms(gl, program)
-    {
-        console.log('setupUniforms');
-
-         u_time = gl.getUniformLocation(program, "u_time");
-
-        if (u_time < 0) {
-            console.log('failed to get uniform time');
-            return;
-        }
-
-        u_modelMatrix = gl.getUniformLocation(program, "u_modelMatrix");
-
-        if (u_modelMatrix < 0) {
-                console.log('failed to get attribute u_modelMatrix');
-            return;
-        }
-
-        u_width = gl.getUniformLocation(program, "u_width");
-
-        if (u_width < 0) {
-                console.log('failed to get attribute u_width');
-            return;
-        }
-
-        u_height = gl.getUniformLocation(program, "u_height");
-
-        if (u_height < 0) {
-                console.log('failed to get attribute u_height');
-            return;
-        }
-
-        // Bind stuff for images
-        u_sampler = gl.getUniformLocation(program, "u_sampler");
-
-        if (u_sampler < 0) {
-            console.log('failed to get uniform u_sampler');
-            return;
-        }
-    }
-
-    function setupAttributes(gl, program)
-    {
-        console.log('setupAtributes');
-
-        a_position = gl.getAttribLocation(program, "a_position");
-
-        if (a_position < 0) {
-            console.log('failed to get attribute position');
-            return;
-        }
-
-        a_pointSize = gl.getAttribLocation(program, "a_pointSize");
-
-        if (a_pointSize < 0) {
-            console.log('failed to get attribute a_pointSize');
-            return;
-        }
-
-        a_color = gl.getAttribLocation(program, "a_color");
-
-        if (a_color < 0) {
-            console.log('failed to get attribute a_color');
-            return;    
-        }
-
-        a_texCoord = gl.getAttribLocation(program, "a_texCoord");
-
-        if (a_texCoord < 0) {
-            console.log('failed to get attribute a_texCoord');
-            return;
-        }      
-    }    
-}
 
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGLShader
-function shaderCompile(gl, sourceCode, type) {
-    
-    console.log(arguments.callee.name);
+function compileGLShader(glContext, sourceCode, type) {
+    console.log(arguments.callee.name + '()');
 
-    var shader = gl.createShader(type);
-    gl.shaderSource(shader, sourceCode);
-    gl.compileShader(shader);
+    var shader = glContext.createShader(type);
+    glContext.shaderSource(shader, sourceCode);
+    glContext.compileShader(shader);        
 
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        var info = gl.getShaderInfoLog(shader);
+    if (!glContext.getShaderParameter(shader, glContext.COMPILE_STATUS)) {
+        var info = glContext.getShaderInfoLog(shader);
         throw 'Could not compile WebGL shader program. \n\n' + info;
     }
     return shader;
 }
+
+function createGLProgram(glContext, vertShader, fragShader) {
+    
+    console.log(arguments.callee.name + '()');
+    
+    // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/createProgram
+
+    var glProgram = glContext.createProgram();        
+    
+    glContext.attachShader(glProgram, vertShader);
+    glContext.attachShader(glProgram, fragShader);
+
+    glContext.linkProgram(glProgram);
+
+    if (!glContext.getProgramParameter(glProgram, glContext.LINK_STATUS))
+    {
+        var info = glContext.getProgramInfoLog(glProgram);
+        throw 'Could not compile WebGL program. \n\n' + info;
+    }
+   
+    // https://stackoverflow.com/questions/14413713/webgl-invalid-operation-uniform1i-location-not-for-current-program
+    glContext.useProgram(glProgram);
+    
+    return glProgram;
+}
+
+function setupGLUniforms(glContext, glProgram) {
+    
+    console.log(arguments.callee.name + '()');
+
+     u_time = glContext.getUniformLocation(glProgram, "u_time");
+
+    if (u_time < 0) {
+        console.log('failed to get uniform time');
+        return;
+    }
+
+    u_modelMatrix = glContext.getUniformLocation(glProgram, "u_modelMatrix");
+
+    if (u_modelMatrix < 0) {
+            console.log('failed to get attribute u_modelMatrix');
+        return;
+    }
+
+    u_width = glContext.getUniformLocation(glProgram, "u_width");
+
+    if (u_width < 0) {
+            console.log('failed to get attribute u_width');
+        return;
+    }
+
+    u_height = glContext.getUniformLocation(glProgram, "u_height");
+
+    if (u_height < 0) {
+            console.log('failed to get attribute u_height');
+        return;
+    }
+
+    // Bind stuff for images
+    u_sampler = glContext.getUniformLocation(glProgram, "u_sampler");
+
+    if (u_sampler < 0) {
+        console.log('failed to get uniform u_sampler');
+        return;
+    }
+}
+
+function setupGLAttributes(glContext, glProgram) {
+    
+    console.log(arguments.callee.name + '()');
+
+    a_position = glContext.getAttribLocation(glProgram, "a_position");
+
+    if (a_position < 0) {
+        console.log('failed to get attribute position');
+        return;
+    }
+
+    a_pointSize = glContext.getAttribLocation(glProgram, "a_pointSize");
+
+    if (a_pointSize < 0) {
+        console.log('failed to get attribute a_pointSize');
+        return;
+    }
+
+    a_color = glContext.getAttribLocation(glProgram, "a_color");
+
+    if (a_color < 0) {
+        console.log('failed to get attribute a_color');
+        return;    
+    }
+
+    a_texCoord = glContext.getAttribLocation(glProgram, "a_texCoord");
+
+    if (a_texCoord < 0) {
+        console.log('failed to get attribute a_texCoord');
+        return;
+    }      
+}    
+
+// TODO: Load images from loadGLTexture, see: 
+// https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Tutorial/Using_textures_in_WebGL
+function loadGLTexture(glContext, image) {
+    
+    console.log(arguments.callee.name + '()');
+    
+    //texture test
+    texture = glContext.createTexture();
+    
+    if (!texture) {
+        console.log("failed to create texture");
+        return false;
+    } 
+    
+    glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, 1);
+    
+    glContext.activeTexture(glContext.TEXTURE0);
+    
+    glContext.bindTexture(glContext.TEXTURE_2D, texture);
+            
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR);
+    
+    glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGB, glContext.RGB, glContext.UNSIGNED_BYTE, image);    
+   
+    //u_sampler will draw from texture unit 0
+    glContext.uniform1i(u_sampler, 0);       
+}
+
 // </editor-fold>
 
 // <editor-fold defaultstate="collasped" desc="Animate and Render">
 
 function initVertexBuffers() {
     
-    // console.log(arguments.callee.name);
+    // console.log(arguments.callee.name + '()');
 
     // Vertices, Interleaved
     // x, y, z,     s, t,   r, g, b, a,     p
@@ -336,7 +317,7 @@ function initVertexBuffers() {
     // number of vertices
     var n = 6;   
         
-    var vertexSizeBuffer = gl.createBuffer();
+    var vertexSizeBuffer = glContext.createBuffer();
     
     if(!vertexSizeBuffer) {
         console.log('Failed to create vertexBuffer object.');
@@ -344,39 +325,39 @@ function initVertexBuffers() {
     }
    
     // Array Buffer
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexSizeBuffer);   
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexSizeBuffer);   
     
     var FSIZE = verticesXYZsTrGBAp.BYTES_PER_ELEMENT;
        
-    gl.bufferData(gl.ARRAY_BUFFER, verticesXYZsTrGBAp, gl.DYNAMIC_DRAW);
+    glContext.bufferData(glContext.ARRAY_BUFFER, verticesXYZsTrGBAp, glContext.DYNAMIC_DRAW);
     
     // Position
-    gl.vertexAttribPointer(a_position, 3, gl.FLOAT, false, FSIZE * 10, 0);
+    glContext.vertexAttribPointer(a_position, 3, glContext.FLOAT, false, FSIZE * 10, 0);
        
-    gl.enableVertexAttribArray(a_position);
+    glContext.enableVertexAttribArray(a_position);
     
     // Color
-    gl.vertexAttribPointer(a_color, 4, gl.FLOAT, false, FSIZE * 10, FSIZE * 5);
+    glContext.vertexAttribPointer(a_color, 4, glContext.FLOAT, false, FSIZE * 10, FSIZE * 5);
     
-    gl.enableVertexAttribArray(a_color);
+    glContext.enableVertexAttribArray(a_color);
     
     // Point Size
-    gl.vertexAttribPointer(
-            a_pointSize, 1, gl.FLOAT, false, FSIZE * 10, FSIZE * 9);
+    glContext.vertexAttribPointer(
+            a_pointSize, 1, glContext.FLOAT, false, FSIZE * 10, FSIZE * 9);
     
-    gl.enableVertexAttribArray(a_pointSize);
+    glContext.enableVertexAttribArray(a_pointSize);
       
     // Texture Coord
-    gl.vertexAttribPointer(a_texCoord, 2, gl.FLOAT, false, FSIZE * 10, FSIZE * 3);
+    glContext.vertexAttribPointer(a_texCoord, 2, glContext.FLOAT, false, FSIZE * 10, FSIZE * 3);
     
-    gl.enableVertexAttribArray(a_texCoord);
+    glContext.enableVertexAttribArray(a_texCoord);
     
     return n;
 }
 
 function initTextureVertexBuffers() {
             
-    // console.log(arguments.callee.name);
+    // console.log(arguments.callee.name + '()');
     
     // Vertices, Interleaved
     // x, y, z,     s, t,   r, g, b, a,     p
@@ -391,47 +372,46 @@ function initTextureVertexBuffers() {
     var n = 4;       
     
     // Vertex Buffer
-    var vertexSizeBuffer = gl.createBuffer();
+    var vertexSizeBuffer = glContext.createBuffer();
     
     if(!vertexSizeBuffer) {
         console.log('Failed to create vertexBuffer object.');
         return -1;
     }
     
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexSizeBuffer);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexSizeBuffer);
     
     //Array Buffer
     var FSIZE = verticesXYZsTrGBAp.BYTES_PER_ELEMENT;
     
-    gl.bufferData(gl.ARRAY_BUFFER, verticesXYZsTrGBAp, gl.DYNAMIC_DRAW);
+    glContext.bufferData(glContext.ARRAY_BUFFER, verticesXYZsTrGBAp, glContext.DYNAMIC_DRAW);
     
     //Position
-    gl.vertexAttribPointer(a_position, 3, gl.FLOAT, false, FSIZE * 10, 0);
+    glContext.vertexAttribPointer(a_position, 3, glContext.FLOAT, false, FSIZE * 10, 0);
         
-    gl.enableVertexAttribArray(a_position);
+    glContext.enableVertexAttribArray(a_position);
     
     //Color
-    gl.vertexAttribPointer(a_color, 4, gl.FLOAT, false, FSIZE * 10, FSIZE * 5);
+    glContext.vertexAttribPointer(a_color, 4, glContext.FLOAT, false, FSIZE * 10, FSIZE * 5);
     
-    gl.enableVertexAttribArray(a_color);
+    glContext.enableVertexAttribArray(a_color);
     
     //Point Size
-    gl.vertexAttribPointer(
-            a_pointSize, 1, gl.FLOAT, false, FSIZE * 10, FSIZE * 9);
+    glContext.vertexAttribPointer(
+            a_pointSize, 1, glContext.FLOAT, false, FSIZE * 10, FSIZE * 9);
     
-    gl.enableVertexAttribArray(a_pointSize);
+    glContext.enableVertexAttribArray(a_pointSize);
     
     //Texture Coord
-    gl.vertexAttribPointer(a_texCoord, 2, gl.FLOAT, false, FSIZE * 10, FSIZE * 3);
+    glContext.vertexAttribPointer(a_texCoord, 2, glContext.FLOAT, false, FSIZE * 10, FSIZE * 3);
     
-    gl.enableVertexAttribArray(a_texCoord);
+    glContext.enableVertexAttribArray(a_texCoord);
       
     return n;
 }
 
-function animate(angle)
-{
-    // console.log(arguments.callee.name);
+function animate(angle) {
+    // console.log(arguments.callee.name + '()');
     
     var now = Date.now();
     var elapsed = now - g_last; //ms
@@ -444,9 +424,8 @@ function animate(angle)
     return newAngle %= 360;
 }
 
-function drawTriangles(gl, numOfVertices, currentAngle, u_modelMatrix, mode)
-{
-        //console.log(arguments.callee.name);
+function drawTriangles(glContext, numOfVertices, currentAngle, u_modelMatrix, mode) {
+        //console.log(arguments.callee.name + '()');
         
         var _modelMatrix = new Matrix4();
                                 
@@ -456,61 +435,60 @@ function drawTriangles(gl, numOfVertices, currentAngle, u_modelMatrix, mode)
         
         _modelMatrix.translate(0, 0, 0);                      
         
-        gl.uniformMatrix4fv(u_modelMatrix, false, _modelMatrix.elements);
+        glContext.uniformMatrix4fv(u_modelMatrix, false, _modelMatrix.elements);
         
-        // gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        // glContext.clearColor(0.0, 0.0, 0.0, 1.0);
         
-        // gl.clear(gl.COLOR_BUFFER_BIT);
+        // glContext.clear(glContext.COLOR_BUFFER_BIT);
         
         if(mode === 1)
         {
             //console.log("mode 1");
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, numOfVertices);                 
+            glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, numOfVertices);                 
         }
         else
         {
             //console.log("mode 2");
-            gl.drawArrays(gl.TRIANGLES, 0, numOfVertices);                 
+            glContext.drawArrays(glContext.TRIANGLES, 0, numOfVertices);                 
         }
 }
 
-function clear(gl)
-{
-    // console.log(arguments.callee.name);
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+function clear(glContext) {
+    // console.log(arguments.callee.name + '()');
+    glContext.clearColor(0.0, 0.0, 0.0, 1.0);
         
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    glContext.clear(glContext.COLOR_BUFFER_BIT);
 }
 
 // https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame
 function renderLoop(timestamp) {
 
-    //console.log(arguments.callee.name);
+    //console.log(arguments.callee.name + '()');
     
     if (renderLoopUpdateCounter > renderLoopUpdateDebugLimit)
     {
         // console.log('enter: renderLoop');        
 
-        // gl.vertexAttrib1f(a_size, 10.0);
+        // glContext.vertexAttrib1f(a_size, 10.0);
 
-        // gl.uniform1f(u_time, timestamp / 1000.0);                              
+        // glContext.uniform1f(u_time, timestamp / 1000.0);                              
         
         if(!display_once)
         {
-            console.log(arguments.callee.name + '(displays once)');
+            console.log(arguments.callee.name + '()');
             //console.log('renderLoop (displays once)');
             
-            gl.uniform1f(u_width, 800.0);
+            glContext.uniform1f(u_width, 800.0);
         
-            gl.uniform1f(u_height, 800.0);
+            glContext.uniform1f(u_height, 800.0);
             
-            loadTexture(gl, texture, u_sampler, image);
+            //loadTexture(glContext, texture, u_sampler, image);
             
             display_once = true;
         }
         currentAngle = animate(currentAngle);
         
-        clear(gl);                
+        clear(glContext);                
         
         // init the vertices - init here for testing to see if I can combine render operations
         // looks like I can
@@ -525,7 +503,7 @@ function renderLoop(timestamp) {
         }
         
         // magic number, 1 = TRIANGLE_STRIP, anything else is TRIANGLES
-        drawTriangles(gl, numOfVertices, currentAngle, u_modelMatrix, 0);
+        drawTriangles(glContext, numOfVertices, currentAngle, u_modelMatrix, 0);
         //*/
               
         ///*
@@ -536,7 +514,7 @@ function renderLoop(timestamp) {
         return -1;               
         }                                                  
                                            
-        drawTriangles(gl, numOfTexVertices, currentAngle, u_modelMatrix, 1);
+        drawTriangles(glContext, numOfTexVertices, currentAngle, u_modelMatrix, 1);
         //*/
         
         renderLoopUpdateCounter = 0;        
@@ -551,9 +529,9 @@ function renderLoop(timestamp) {
 
 // <editor-fold defaultstate="collasped" desc="Event Handlers">
 
-function clickEvent(ev, gl, canvas, a_position) {
+function clickEvent(ev, glContext, canvas, a_position) {
 
-    console.log(arguments.callee.name);
+    console.log(arguments.callee.name + '()');
 
     var x = ev.clientX;
     var y = ev.clientY;
@@ -574,17 +552,31 @@ function clickEvent(ev, gl, canvas, a_position) {
 
 function delayedCompile() {            
     
-    console.log(arguments.callee.name);
+    console.log(arguments.callee.name + '()');
        
-    for(i = 0; i < 100; ++i)
-    {
-        console.log(SCRIPT_LOAD);
+    for(i = 0; i < 100; ++i) {        
         
         if(VSHADER_SOURCE && FSHADER_SOURCE && SCRIPT_LOAD > 1)
         {        
             if(image)
             {
-                shaderSetup(gl);
+                //gl compile path
+                var compiledVertShader = compileGLShader(glContext, VSHADER_SOURCE, glContext.VERTEX_SHADER);
+                
+                var compiledFragShader = compileGLShader(glContext, FSHADER_SOURCE, glContext.FRAGMENT_SHADER);
+                
+                var compiledGLProgram = createGLProgram(glContext, compiledVertShader, compiledFragShader);               
+                
+                loadGLTexture(glContext, image);
+                
+                setupGLUniforms(glContext, compiledGLProgram);
+                
+                setupGLAttributes(glContext, compiledGLProgram);
+                                                
+                //init the time reference for first frame just befor calling animation loop
+                g_last = Date.now();  
+                
+                window.requestAnimationFrame(renderLoop);
                 
                 // test code
                 var assetNamespace = eval(displayAsset.namespace);
@@ -605,13 +597,13 @@ function delayedCompile() {
     }          
 }
 
-console.log("Calling delayedCompile...");
+console.log("Calling delayedCompile...1448");
 setTimeout(delayedCompile, 5000);
 
 // </editor-fold>
 
 function main() {
-    console.log(arguments.callee.name);
+    console.log(arguments.callee.name + '()');
     
     //startWorker();
            
@@ -680,44 +672,37 @@ function main() {
     
     var canvas = document.getElementById('webgl');
 
-    gl = getWebGLContext(canvas);
+    glContext = getWebGLContext(canvas);
 
-    if (!gl) {
+    if (!glContext) {
         console.log('Failed to get the rendering context for WebGL');
         return;
     }
 
     canvas.onmousedown = function (ev) {
-        clickEvent(ev, gl, canvas, a_position);
+        clickEvent(ev, glContext, canvas, a_position);
     };
     
     //init model matrix
     modelMatrix = new Matrix4();
     
     image = new Image();                 
-        
-    texture = gl.createTexture();
-    
-    if (!texture) {
-        console.log("failed to create texture");
-        return false;
-    }                
-   
+                      
     // look into using jquery instead?
     // https://api.jquery.com/jquery.getscript/
-    loadRemoteResource(gl,'shaders/ch5_fshader.frag', 'shader', gl.FRAGMENT_SHADER);
-    loadRemoteResource(gl,'shaders/ch5_vshader.vert', 'shader', gl.VERTEX_SHADER);
+    loadRemoteResource(glContext,'shaders/ch5_fshader.frag', 'shader', glContext.FRAGMENT_SHADER);
+    loadRemoteResource(glContext,'shaders/ch5_vshader.vert', 'shader', glContext.VERTEX_SHADER);
         
-    loadRemoteResource(gl, 'displayAssets/testAsset/kernels/animation.js', 'script', 'none');    
-    loadRemoteResource(gl, 'displayAssets/testAsset/kernels/render.js', 'script', 'none');                              
+    loadRemoteResource(glContext, 'displayAssets/testAsset/kernels/animation.js', 'script', 'none');    
+    loadRemoteResource(glContext, 'displayAssets/testAsset/kernels/render.js', 'script', 'none');                              
     
-    loadRemoteResource(gl, 'images/snow2.jpg', 'image', 'none');
+    loadRemoteResource(glContext, 'images/snow2.jpg', 'image', 'none');
 }
 
 //<editor-fold desc="Asset Loader Code WIP">
 function queryDisplayAssetsCallback(assetList) {
     
-    console.log(arguments.callee.name);
+    console.log(arguments.callee.name + '()');
 
     $.each( assetList, function(key, val) {
     console.log(key);
@@ -730,7 +715,7 @@ function queryDisplayAssetsCallback(assetList) {
 
 function worker_startAssetLoaderCoordinator() {
     
-    console.log(arguments.callee.name);
+    console.log(arguments.callee.name + '()');
     
     if(typeof(Worker) !== "undefined") {
         if(typeof(worker_assetLoaderCoordinator) === "undefined") {
@@ -748,7 +733,7 @@ function worker_startAssetLoaderCoordinator() {
 
 function worker_processMesssageAssetLoaderCoordinator(e) {
     
-    console.log(arguments.callee.name);
+    console.log(arguments.callee.name + '()');
     
     var messageJSON = e.data;
     var message;
@@ -777,7 +762,7 @@ function worker_processMesssageAssetLoaderCoordinator(e) {
 
 function worker_stopAssetLoaderCoordinator() {
     
-    console.log(arguments.callee.name);
+    console.log(arguments.callee.name + '()');
     
     if(worker_assetLoaderCoordinator !== undefined)
     {
@@ -788,7 +773,7 @@ function worker_stopAssetLoaderCoordinator() {
 
 function worker_advanceStateMachineAssetLoaderCoordinator() {
     
-    console.log(arguments.callee.name);
+    console.log(arguments.callee.name + '()');
     
     if(worker_assetLoaderCoordinator !== undefined)
     {
